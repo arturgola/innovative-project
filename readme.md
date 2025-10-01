@@ -132,29 +132,8 @@ app.listen(PORT, () => {
 
 ---
 
-## 🧼 Troubleshooting
-
-If you see errors like `Cannot find module '@radix-ui/react-dialog'`, run:
-
-```bash
-npm install @radix-ui/react-dialog @radix-ui/react-slot
-```
-
-If issues persist:
-
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
-
----
-
 ## 📌 Notes
 
 - Tailwind is configured via NativeWind for React Native styling.
 - SQLite is used both in backend (`sqlite3`) and optionally in frontend (`expo-sqlite`) for local storage.
 - Backend and frontend run independently—connect via REST API.
-
-```
-
-```

@@ -1,10 +1,9 @@
 Here’s complete `README.md` file with everything in one place—installation, technologies, structure, and how to run both frontend and backend:
 
-![gif](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExd3docnlnYzE1YXo3bjFxbjEydWQ3Y2x4c3l2YzNwdTJtaGY1bmExbSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oEdv44BQhHojnGY7u/giphy.gif)
-
 ---
 
-```markdown
+![gif](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExd3docnlnYzE1YXo3bjFxbjEydWQ3Y2x4c3l2YzNwdTJtaGY1bmExbSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oEdv44BQhHojnGY7u/giphy.gif)
+
 # 🌱 EcoScan - Smart Product Scanner App
 
 A cross-platform mobile app built with **Expo Router** for intelligent product scanning and environmental impact tracking. Features barcode scanning, product details, user profiles, and gamified recycling points system.
@@ -21,11 +20,9 @@ A cross-platform mobile app built with **Expo Router** for intelligent product s
 - **Database**: SQLite (local)
 - **API Communication**: RESTful endpoints
 
----
-
 ## 📁 Project Architecture
-```
 
+```bash
 ecoscan/
 ├── frontend/ # Expo + React Native App
 │ ├── app/ # 🔥 EXPO ROUTER - All app logic here
@@ -59,19 +56,20 @@ ecoscan/
 ├── server.js # Main server file
 ├── package.json
 └── data.db # SQLite database
-
-````
+```
 
 ---
 
 ## 🏗 Frontend Architecture Guidelines
 
 ### **🔥 Expo Router File-Based Navigation**
+
 This app uses Expo Router's file-based routing system. The `app/` directory structure directly maps to your app's navigation.
 
 ### **📍 Where to Add New Features:**
 
 #### **1. New Screens/Pages**
+
 ```bash
 # Add new route screens in app/
 app/
@@ -81,6 +79,7 @@ app/
 ```
 
 #### **2. New Components**
+
 ```bash
 # Add reusable components in components/
 components/
@@ -90,6 +89,7 @@ components/
 ```
 
 #### **3. New Types**
+
 ```bash
 # Add TypeScript interfaces in app/types/
 app/types/
@@ -97,6 +97,7 @@ app/types/
 ```
 
 #### **4. Global State**
+
 ```bash
 # Extend context in app/contexts/
 app/contexts/
@@ -107,19 +108,19 @@ app/contexts/
 
 ```tsx
 // Navigation examples
-import { router } from 'expo-router';
+import { router } from "expo-router";
 
 // Navigate to screens
-router.push('/scan');           // Go to scan screen
-router.push('/(tabs)/explore'); // Go to explore tab
-router.back();                  // Go back
+router.push("/scan"); // Go to scan screen
+router.push("/(tabs)/explore"); // Go to explore tab
+router.back(); // Go back
 ```
 
 ### **📱 Component Communication**
 
 ```tsx
 // Use context for global state
-import { useAppContext } from '../contexts/app-context';
+import { useAppContext } from "../contexts/app-context";
 
 function YourComponent() {
   const { userProfile, scannedProducts, addScannedProduct } = useAppContext();
@@ -139,10 +140,11 @@ function YourComponent() {
 ## 📦 Installation
 
 ### 1. Clone the repository
+
 ```bash
 git clone https://github.com/your-username/your-repo-name.git
 cd your-repo-name
-````
+```
 
 ### 2. Install backend dependencies
 

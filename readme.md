@@ -1,5 +1,7 @@
 Here’s complete `README.md` file with everything in one place—installation, technologies, structure, and how to run both frontend and backend:
 
+![gif](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExd3docnlnYzE1YXo3bjFxbjEydWQ3Y2x4c3l2YzNwdTJtaGY1bmExbSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oEdv44BQhHojnGY7u/giphy.gif)
+
 ---
 
 ```markdown

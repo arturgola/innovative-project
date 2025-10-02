@@ -5,29 +5,134 @@ Here’s complete `README.md` file with everything in one place—installation, 
 ---
 
 ```markdown
-# 📱 Fullstack Mobile App – Expo + Node.js + SQLite
+# 🌱 EcoScan - Smart Product Scanner App
 
-A cross-platform mobile app built with **Expo (React Native)** and styled using **Tailwind CSS via NativeWind**, connected to a **Node.js + Express** backend with a **SQLite** database.
+A cross-platform mobile app built with **Expo Router** for intelligent product scanning and environmental impact tracking. Features barcode scanning, product details, user profiles, and gamified recycling points system.
 
 ---
 
 ## 🧰 Technologies Used
 
-- **Frontend**: Expo (React Native), NativeWind (Tailwind CSS for React Native)
+- **Frontend**: Expo Router, React Native, TypeScript
+- **Styling**: React Native StyleSheet with LinearGradient
+- **Navigation**: File-based routing with Expo Router
+- **Icons**: Expo Vector Icons (@expo/vector-icons)
 - **Backend**: Node.js, Express.js
 - **Database**: SQLite (local)
-- **API Communication**: RESTful endpoints via `fetch` or `axios`
+- **API Communication**: RESTful endpoints
 
 ---
 
-## 📁 Project Structure
+## 📁 Project Architecture
 ```
 
-my-fullstack-app/
-├── frontend/ # Expo + NativeWind
+ecoscan/
+├── frontend/ # Expo + React Native App
+│ ├── app/ # 🔥 EXPO ROUTER - All app logic here
+│ │ ├── (tabs)/ # Tab navigation group
+│ │ │ ├── \_layout.tsx # Tab bar configuration
+│ │ │ ├── index.tsx # Home screen (MainMenu)
+│ │ │ └── explore.tsx # Statistics/History screen
+│ │ ├── contexts/ # Global state management
+│ │ │ └── app-context.tsx # App-wide context (user, products, etc.)
+│ │ ├── types/ # TypeScript interfaces
+│ │ │ └── index.ts # Product, UserProfile interfaces
+│ │ ├── \_layout.tsx # Root layout with providers
+│ │ ├── greeting.tsx # Welcome/onboarding screen
+│ │ ├── scan.tsx # Product scanner screen
+│ │ ├── product.tsx # Product details screen
+│ │ ├── success.tsx # Scan success confirmation
+│ │ └── user-profile.tsx # User profile management
+│ ├── components/ # Reusable UI components
+│ │ ├── ui/ # Basic UI elements
+│ │ ├── greeting-screen.tsx # Welcome screen component
+│ │ ├── main-menu.tsx # Home dashboard component
+│ │ ├── scan-screen.tsx # Scanner UI component
+│ │ ├── product-details.tsx # Product info component
+│ │ ├── statistics-screen.tsx # History/stats component
+│ │ ├── success-screen.tsx # Success feedback component
+│ │ └── user-profile.tsx # Profile management component
+│ ├── constants/ # App constants and themes
+│ ├── hooks/ # Custom React hooks
+│ └── assets/ # Images, icons, fonts
 └── backend/ # Node.js + Express + SQLite
+├── server.js # Main server file
+├── package.json
+└── data.db # SQLite database
 
 ````
+
+---
+
+## 🏗 Frontend Architecture Guidelines
+
+### **🔥 Expo Router File-Based Navigation**
+This app uses Expo Router's file-based routing system. The `app/` directory structure directly maps to your app's navigation.
+
+### **📍 Where to Add New Features:**
+
+#### **1. New Screens/Pages**
+```bash
+# Add new route screens in app/
+app/
+├── your-new-screen.tsx          # Creates /your-new-screen route
+├── (group)/                     # Route groups for organization
+│   └── grouped-screen.tsx       # Creates /(group)/grouped-screen route
+```
+
+#### **2. New Components**
+```bash
+# Add reusable components in components/
+components/
+├── your-component.tsx           # Reusable UI component
+├── ui/                          # Basic UI elements (buttons, inputs)
+│   └── your-ui-component.tsx
+```
+
+#### **3. New Types**
+```bash
+# Add TypeScript interfaces in app/types/
+app/types/
+└── index.ts                     # Add interfaces here
+```
+
+#### **4. Global State**
+```bash
+# Extend context in app/contexts/
+app/contexts/
+└── app-context.tsx              # Add new state/actions here
+```
+
+### **🧭 Navigation Patterns**
+
+```tsx
+// Navigation examples
+import { router } from 'expo-router';
+
+// Navigate to screens
+router.push('/scan');           // Go to scan screen
+router.push('/(tabs)/explore'); // Go to explore tab
+router.back();                  // Go back
+```
+
+### **📱 Component Communication**
+
+```tsx
+// Use context for global state
+import { useAppContext } from '../contexts/app-context';
+
+function YourComponent() {
+  const { userProfile, scannedProducts, addScannedProduct } = useAppContext();
+  // Your component logic
+}
+```
+
+### **🎨 Styling Guidelines**
+
+- Use React Native StyleSheet for component styling
+- Use LinearGradient for enhanced visual effects
+- Follow existing color scheme and design patterns
+- Keep components responsive with Dimensions API
 
 ---
 
@@ -97,45 +202,72 @@ fetch("http://192.168.x.x:3000/items");
 
 ---
 
-## 🛠 Backend Sample (`server.js`)
+## � App Flow & Features
 
-```js
-const express = require("express");
-const cors = require("cors");
-const sqlite3 = require("sqlite3").verbose();
-const app = express();
-const PORT = 3000;
+### **Core User Journey:**
 
-app.use(cors());
-app.use(express.json());
+1. **Welcome Screen** → Onboarding experience
+2. **Main Menu** → Dashboard with user stats and quick actions
+3. **Scanner** → Barcode/product scanning functionality
+4. **Product Details** → Environmental impact & recycling info
+5. **Success Screen** → Points awarded confirmation
+6. **Statistics** → Scan history and user progress
+7. **Profile** → User account and achievements
 
-const db = new sqlite3.Database("./data.db");
-db.run("CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, name TEXT)");
+### **Key Features:**
 
-app.get("/items", (req, res) => {
-  db.all("SELECT * FROM items", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
+- 📱 **Product Scanning**: Mock barcode scanning with product database
+- 🏆 **Gamification**: Points system and user levels
+- 📊 **Statistics**: Track scanning history and environmental impact
+- ♻️ **Recycling Guidance**: Product-specific disposal instructions
+- 👤 **User Profiles**: Personalized experience with achievements
 
-app.post("/items", (req, res) => {
-  const { name } = req.body;
-  db.run("INSERT INTO items (name) VALUES (?)", [name], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ id: this.lastID, name });
-  });
-});
+---
 
-app.listen(PORT, () => {
-  console.log(`Backend running at http://localhost:${PORT}`);
-});
+## 🛠 Backend API Endpoints
+
+The backend provides RESTful endpoints for the scanner app:
+
+```bash
+# Example endpoints (implement as needed)
+GET    /api/products/:barcode    # Get product info by barcode
+POST   /api/scans               # Log a new scan
+GET    /api/users/:id/profile   # Get user profile
+PUT    /api/users/:id/profile   # Update user profile
+GET    /api/users/:id/history   # Get scan history
 ```
+
+---
+
+## 🚀 Development Tips
+
+### **Adding New Screens:**
+
+1. Create a new `.tsx` file in `app/` directory
+2. Add route configuration in `app/_layout.tsx` if needed
+3. Create corresponding component in `components/` if complex
+4. Update navigation in existing screens
+
+### **State Management:**
+
+- Use `app/contexts/app-context.tsx` for global state
+- Local state with `useState` for component-specific data
+- Extend context interface in `app/types/index.ts`
+
+### **Best Practices:**
+
+- Follow TypeScript strict mode
+- Use relative imports within `app/` directory
+- Keep components small and focused
+- Implement proper error handling
+- Test navigation flows thoroughly
 
 ---
 
 ## 📌 Notes
 
-- Tailwind is configured via NativeWind for React Native styling.
-- SQLite is used both in backend (`sqlite3`) and optionally in frontend (`expo-sqlite`) for local storage.
-- Backend and frontend run independently—connect via REST API.
+- **Expo Router**: File-based routing system - file structure = navigation structure
+- **TypeScript**: Fully typed for better development experience
+- **Context API**: Global state management without external libraries
+- **Mock Data**: Scanner currently uses mock product data (replace with real API)
+- **Cross-Platform**: Runs on iOS, Android, and Web

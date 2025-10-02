@@ -8,6 +8,9 @@ export interface Product {
   rating: number;
   description: string;
   scannedAt: string;
+  photoUri?: string;
+  photoWidth?: number;
+  photoHeight?: number;
 }
 
 export interface UserProfile {

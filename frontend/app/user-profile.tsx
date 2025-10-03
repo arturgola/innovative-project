@@ -4,7 +4,7 @@ import UserProfile from "@/components/user-profile";
 import { useAppContext } from "./contexts/app-context";
 
 export default function UserProfilePage() {
-  const { userProfile, setUserProfile } = useAppContext();
+  const { userProfile, updateUserProfile } = useAppContext();
 
   const handleBack = () => {
     router.back();
@@ -14,7 +14,7 @@ export default function UserProfilePage() {
     <UserProfile
       userProfile={userProfile}
       onBack={handleBack}
-      onUpdateProfile={setUserProfile}
+      onUpdateProfile={updateUserProfile}
     />
   );
 }

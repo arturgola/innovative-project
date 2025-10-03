@@ -14,6 +14,7 @@ export interface Product {
 }
 
 export interface UserProfile {
+  id?: number;
   name: string;
   level: number;
   totalPoints: number;

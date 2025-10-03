@@ -5,7 +5,13 @@ import { useAppContext } from "../contexts/app-context";
 import { Product } from "../types";
 
 export default function TabTwoScreen() {
-  const { scannedProducts, setCurrentProduct } = useAppContext();
+  const { scannedProducts, setCurrentProduct, isLoadingUser, hasUser } =
+    useAppContext();
+
+  // Show loading or redirect to onboarding if no user
+  if (isLoadingUser || !hasUser) {
+    return null; // Let the main layout handle navigation
+  }
 
   const handleBack = () => {
     router.back();

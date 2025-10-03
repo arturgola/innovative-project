@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -22,28 +23,43 @@ interface UserProfile {
 interface UserProfileProps {
   userProfile: UserProfile;
   onBack: () => void;
-  onUpdateProfile: (profile: UserProfile) => void;
+  onUpdateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
-const UserProfileScreen = ({ userProfile, onBack, onUpdateProfile }: UserProfileProps) => {
+const UserProfileScreen = ({
+  userProfile,
+  onBack,
+  onUpdateProfile,
+}: UserProfileProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(userProfile.name);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
-  const handleSaveName = () => {
-    if (editedName.trim() === '') {
-      Alert.alert('Error', 'Name cannot be empty');
+  const handleSaveName = async () => {
+    if (editedName.trim() === "") {
+      Alert.alert("Error", "Name cannot be empty");
       return;
     }
-    onUpdateProfile({ ...userProfile, name: editedName });
-    setIsEditing(false);
+
+    setIsUpdating(true);
+    try {
+      await onUpdateProfile({ name: editedName.trim() });
+      setIsEditing(false);
+      Alert.alert("Success", "Profile updated successfully!");
+    } catch (error) {
+      Alert.alert("Error", "Failed to update profile. Please try again.");
+      console.error("Error updating profile:", error);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const getLevelProgress = () => {
@@ -59,30 +75,30 @@ const UserProfileScreen = ({ userProfile, onBack, onUpdateProfile }: UserProfile
   };
 
   const achievements = [
-    { 
-      name: "First Scan", 
+    {
+      name: "First Scan",
       description: "Complete your first product scan",
       unlocked: userProfile.totalPoints > 0,
-      icon: "🎯"
+      icon: "🎯",
     },
-    { 
-      name: "Point Collector", 
+    {
+      name: "Point Collector",
       description: "Earn 100 total points",
       unlocked: userProfile.totalPoints >= 100,
-      icon: "💰"
+      icon: "💰",
     },
-    { 
-      name: "Daily Scanner", 
+    {
+      name: "Daily Scanner",
       description: "Scan 5 products in one day",
       unlocked: userProfile.scansToday >= 5,
-      icon: "📱"
+      icon: "📱",
     },
-    { 
-      name: "Level Up", 
+    {
+      name: "Level Up",
       description: "Reach level 5",
       unlocked: userProfile.level >= 5,
-      icon: "⭐"
-    }
+      icon: "⭐",
+    },
   ];
 
   return (
@@ -108,7 +124,7 @@ const UserProfileScreen = ({ userProfile, onBack, onUpdateProfile }: UserProfile
                 {userProfile.name.charAt(0).toUpperCase()}
               </Text>
             </View>
-            
+
             <View style={styles.profileInfo}>
               {isEditing ? (
                 <View style={styles.editContainer}>
@@ -120,19 +136,33 @@ const UserProfileScreen = ({ userProfile, onBack, onUpdateProfile }: UserProfile
                     returnKeyType="done"
                     onSubmitEditing={handleSaveName}
                   />
-                  <TouchableOpacity onPress={handleSaveName} style={styles.saveButton}>
-                    <Ionicons name="checkmark" size={16} color="#6366f1" />
+                  <TouchableOpacity
+                    onPress={handleSaveName}
+                    style={[
+                      styles.saveButton,
+                      isUpdating && styles.buttonDisabled,
+                    ]}
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? (
+                      <ActivityIndicator size="small" color="#6366f1" />
+                    ) : (
+                      <Ionicons name="checkmark" size={16} color="#6366f1" />
+                    )}
                   </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.nameContainer}>
                   <Text style={styles.userName}>{userProfile.name}</Text>
-                  <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.editButton}>
+                  <TouchableOpacity
+                    onPress={() => setIsEditing(true)}
+                    style={styles.editButton}
+                  >
                     <Ionicons name="create" size={16} color="#6366f1" />
                   </TouchableOpacity>
                 </View>
               )}
-              
+
               <View style={styles.levelContainer}>
                 <Ionicons name="star" size={16} color="#a855f7" />
                 <Text style={styles.levelText}>Level {userProfile.level}</Text>
@@ -143,13 +173,20 @@ const UserProfileScreen = ({ userProfile, onBack, onUpdateProfile }: UserProfile
           {/* Level progress */}
           <View style={styles.progressContainer}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>Progress to Level {userProfile.level + 1}</Text>
-              <Text style={styles.progressPoints}>{getNextLevelPoints()} points needed</Text>
+              <Text style={styles.progressLabel}>
+                Progress to Level {userProfile.level + 1}
+              </Text>
+              <Text style={styles.progressPoints}>
+                {getNextLevelPoints()} points needed
+              </Text>
             </View>
             <View style={styles.progressBar}>
               <LinearGradient
                 colors={["#6366f1", "#a855f7"]}
-                style={[styles.progressFill, { width: `${getLevelProgress()}%` }]}
+                style={[
+                  styles.progressFill,
+                  { width: `${getLevelProgress()}%` },
+                ]}
               />
             </View>
           </View>
@@ -166,7 +203,12 @@ const UserProfileScreen = ({ userProfile, onBack, onUpdateProfile }: UserProfile
           </View>
 
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: "rgba(168, 85, 247, 0.2)" }]}>
+            <View
+              style={[
+                styles.statIcon,
+                { backgroundColor: "rgba(168, 85, 247, 0.2)" },
+              ]}
+            >
               <Ionicons name="trophy" size={24} color="#a855f7" />
             </View>
             <Text style={styles.statValue}>{userProfile.scansToday}</Text>
@@ -180,19 +222,26 @@ const UserProfileScreen = ({ userProfile, onBack, onUpdateProfile }: UserProfile
             <Ionicons name="person" size={20} color="#6366f1" />
             <Text style={styles.cardTitle}>Member Information</Text>
           </View>
-          
+
           <View style={styles.memberInfo}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Member Since</Text>
               <View style={styles.infoValue}>
                 <Ionicons name="calendar" size={16} color="#6b7280" />
-                <Text style={styles.infoText}>{formatDate(userProfile.joinedDate)}</Text>
+                <Text style={styles.infoText}>
+                  {formatDate(userProfile.joinedDate)}
+                </Text>
               </View>
             </View>
-            
+
             <View style={styles.infoRowLast}>
               <Text style={styles.infoLabel}>Current Level</Text>
-              <Text style={[styles.infoText, { color: "#6366f1", fontWeight: "500" }]}>
+              <Text
+                style={[
+                  styles.infoText,
+                  { color: "#6366f1", fontWeight: "500" },
+                ]}
+              >
                 Level {userProfile.level}
               </Text>
             </View>
@@ -205,30 +254,32 @@ const UserProfileScreen = ({ userProfile, onBack, onUpdateProfile }: UserProfile
             <Ionicons name="trophy" size={20} color="#6366f1" />
             <Text style={styles.cardTitle}>Achievements</Text>
           </View>
-          
+
           <View style={styles.achievementsGrid}>
             {achievements.map((achievement, index) => (
-              <View 
+              <View
                 key={achievement.name}
                 style={[
                   styles.achievementItem,
                   {
-                    backgroundColor: achievement.unlocked 
-                      ? "rgba(16, 185, 129, 0.1)" 
+                    backgroundColor: achievement.unlocked
+                      ? "rgba(16, 185, 129, 0.1)"
                       : "rgba(156, 163, 175, 0.1)",
-                    borderColor: achievement.unlocked 
-                      ? "rgba(16, 185, 129, 0.3)" 
+                    borderColor: achievement.unlocked
+                      ? "rgba(16, 185, 129, 0.3)"
                       : "rgba(156, 163, 175, 0.3)",
-                  }
+                  },
                 ]}
               >
                 <Text style={styles.achievementIcon}>{achievement.icon}</Text>
-                <Text style={[
-                  styles.achievementName,
-                  {
-                    color: achievement.unlocked ? "#10b981" : "#6b7280"
-                  }
-                ]}>
+                <Text
+                  style={[
+                    styles.achievementName,
+                    {
+                      color: achievement.unlocked ? "#10b981" : "#6b7280",
+                    },
+                  ]}
+                >
                   {achievement.name}
                 </Text>
                 <Text style={styles.achievementDescription}>
@@ -510,6 +561,9 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     textAlign: "center",
     lineHeight: 12,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });
 

@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
+import { ApiService } from "../services/api";
 
 interface ScanScreenProps {
   onBack: () => void;
@@ -99,24 +100,73 @@ const ScanScreen = ({
         base64: false,
       });
 
-      // Create a product object with the photo information
-      const productWithPhoto = {
-        id: Date.now(),
-        name: "Scanned Product",
-        brand: "Unknown Brand",
-        category: "Recyclable Item",
-        barcode: "unknown",
-        points: Math.floor(Math.random() * 50) + 10,
-        rating: 0,
-        description: "Product scanned via camera. Analysis pending.",
-        scannedAt: new Date().toISOString(),
-        photoUri: photo.uri, // Store the photo URI
-        photoWidth: photo.width,
-        photoHeight: photo.height,
-      };
+      // Show analyzing message
+      Alert.alert(
+        "Analyzing...",
+        "Please wait while we analyze your product image."
+      );
 
-      setIsScanning(false);
-      onScanComplete(productWithPhoto);
+      try {
+        // First, get object and material analysis
+        const objectMaterialResult = await ApiService.analyzeObjectMaterial(
+          photo.uri
+        );
+
+        // Then analyze the image with full OpenAI analysis
+        const analysisResult = await ApiService.analyzeProductImage(photo.uri);
+
+        // Create a product object with the analysis results
+        const productWithAnalysis = {
+          id: Date.now(),
+          name: analysisResult.name,
+          brand: analysisResult.brand,
+          category: analysisResult.category,
+          barcode: "camera-scanned",
+          points: Math.floor(analysisResult.ecoScore / 2), // Convert eco score to points
+          rating: analysisResult.ecoScore,
+          description: `${objectMaterialResult.shortDescription} - ${analysisResult.description}`,
+          scannedAt: new Date().toISOString(),
+          photoUri: photo.uri,
+          photoWidth: photo.width,
+          photoHeight: photo.height,
+          recyclability: analysisResult.recyclability,
+          ecoScore: analysisResult.ecoScore,
+          suggestions: analysisResult.suggestions,
+          confidence: analysisResult.confidence,
+          analysisMethod: "openai-vision",
+          objectMaterial: objectMaterialResult.shortDescription,
+        };
+
+        setIsScanning(false);
+        onScanComplete(productWithAnalysis);
+      } catch (analysisError) {
+        console.error("Analysis error:", analysisError);
+
+        // Fallback to basic product info if OpenAI analysis fails
+        const basicProduct = {
+          id: Date.now(),
+          name: "Scanned Product",
+          brand: "Unknown Brand",
+          category: "General Item",
+          barcode: "camera-scanned",
+          points: Math.floor(Math.random() * 50) + 10,
+          rating: 0,
+          description: "Product scanned via camera. AI analysis unavailable.",
+          scannedAt: new Date().toISOString(),
+          photoUri: photo.uri,
+          photoWidth: photo.width,
+          photoHeight: photo.height,
+          analysisMethod: "basic",
+        };
+
+        setIsScanning(false);
+        Alert.alert(
+          "Analysis Failed",
+          "Unable to analyze the product with AI. Basic scan completed.",
+          [{ text: "OK" }]
+        );
+        onScanComplete(basicProduct);
+      }
     } catch (error) {
       setIsScanning(false);
       Alert.alert("Error", "Failed to take picture. Please try again.");
@@ -184,7 +234,7 @@ const ScanScreen = ({
           <View style={styles.instructionsOverlay}>
             <Text style={styles.instructionText}>
               {isScanning
-                ? "Taking picture..."
+                ? "Analyzing with AI..."
                 : "Position the product within the frame"}
             </Text>
           </View>
@@ -194,12 +244,14 @@ const ScanScreen = ({
             <View style={styles.tipItem}>
               <Ionicons name="flashlight" size={18} color="#ffffff" />
               <Text style={styles.tipText}>
-                Use good lighting for best results
+                Use good lighting for best AI analysis
               </Text>
             </View>
             <View style={styles.tipItem}>
-              <Ionicons name="resize" size={18} color="#ffffff" />
-              <Text style={styles.tipText}>Hold steady and align barcode</Text>
+              <Ionicons name="bulb" size={18} color="#ffffff" />
+              <Text style={styles.tipText}>
+                AI will analyze eco-friendliness
+              </Text>
             </View>
           </View>
 

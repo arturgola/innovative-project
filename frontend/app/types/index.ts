@@ -11,6 +11,13 @@ export interface Product {
   photoUri?: string;
   photoWidth?: number;
   photoHeight?: number;
+  // AI Analysis fields
+  recyclability?: string;
+  ecoScore?: number;
+  suggestions?: string[];
+  confidence?: number;
+  analysisMethod?: "openai-vision" | "basic" | "barcode";
+  objectMaterial?: string;
 }
 
 export interface UserProfile {

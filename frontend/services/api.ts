@@ -2,24 +2,25 @@ import { UserProfile } from "../types";
 
 const API_BASE_URL = "http://192.168.1.145:3000";
 
-// OpenAI Configuration
-const OPENAI_API_KEY =
-  process.env.EXPO_PUBLIC_OPENAI_API_KEY || "your-openai-api-key-here";
-const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
-
 export interface ProductAnalysisResult {
+  id: number;
   name: string;
   brand: string;
   category: string;
+  barcode: string;
+  points: number;
+  rating: number;
+  description: string;
   recyclability: string;
   ecoScore: number;
-  description: string;
   suggestions: string[];
   confidence: number;
-}
-
-export interface ObjectMaterialAnalysis {
-  shortDescription: string;
+  analysisMethod: string;
+  objectMaterial: string;
+  photoUri: string;
+  photoWidth: number;
+  photoHeight: number;
+  scannedAt: string;
 }
 
 export class ApiService {
@@ -121,171 +122,71 @@ export class ApiService {
     }
   }
 
-  // OpenAI Vision API methods
-  static async analyzeObjectMaterial(
-    imageUri: string
-  ): Promise<ObjectMaterialAnalysis> {
-    try {
-      // Convert image to base64
-      const base64Image = await this.convertImageToBase64(imageUri);
-
-      const response = await fetch(OPENAI_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `Analyze the object in this image and identify its material. Return only a short description string with the object type and material. For example: "plastic bottle", "metal can", "glass jar", "cardboard box", "fabric shirt", "leather shoe", etc. Keep it very brief - just type and material.`,
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:image/jpeg;base64,${base64Image}`,
-                    detail: "high",
-                  },
-                },
-              ],
-            },
-          ],
-          max_tokens: 50,
-          temperature: 0.1,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || "Failed to analyze image");
-      }
-
-      const data = await response.json();
-      const shortDescription = data.choices[0].message.content.trim();
-
-      return {
-        shortDescription: shortDescription || "unknown object",
-      };
-    } catch (error) {
-      console.error("Error analyzing object material with OpenAI:", error);
-      return {
-        shortDescription: "unknown object",
-      };
-    }
-  }
-
+  // Product Analysis API methods
   static async analyzeProductImage(
-    imageUri: string
+    imageUri: string,
+    userId?: number
   ): Promise<ProductAnalysisResult> {
     try {
-      // Convert image to base64
-      const base64Image = await this.convertImageToBase64(imageUri);
+      // Create FormData for image upload
+      const formData = new FormData();
 
-      const response = await fetch(OPENAI_API_URL, {
+      // Convert the image URI to a blob and append to form data
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+
+      formData.append("image", blob, "product-image.jpg");
+
+      if (userId) {
+        formData.append("userId", userId.toString());
+      }
+
+      const analysisResponse = await fetch(`${API_BASE_URL}/analyze-product`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `First, analyze the object in this image and identify its material. Then provide comprehensive analysis.
-
-STEP 1: Analyze object and its material, return only string with object short descriptions, such as type and material (e.g., "plastic bottle", "metal can", "glass jar").
-
-STEP 2: Provide detailed analysis in JSON format:
-                  {
-                    "name": "Product name",
-                    "brand": "Brand name", 
-                    "category": "Product category",
-                    "recyclability": "Type of recyclability (e.g., fully recyclable, partially recyclable, not recyclable)",
-                    "ecoScore": "Environmental score from 1-100",
-                    "description": "Brief product description including the object type and material from step 1",
-                    "suggestions": ["Array of eco-friendly suggestions"],
-                    "confidence": "Confidence level from 0-100"
-                  }
-                  
-                  Focus on sustainability and environmental impact. Include the object type and material analysis in the description field. If you can't identify the product clearly, provide general information and mark confidence as low.`,
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:image/jpeg;base64,${base64Image}`,
-                    detail: "high",
-                  },
-                },
-              ],
-            },
-          ],
-          max_tokens: 1000,
-          temperature: 0.3,
-        }),
+        body: formData,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || "Failed to analyze image");
+      if (!analysisResponse.ok) {
+        const error = await analysisResponse.json();
+        throw new Error(error.error || "Failed to analyze image");
       }
 
-      const data = await response.json();
-      const content = data.choices[0].message.content;
+      const result = await analysisResponse.json();
 
-      // Parse the JSON response
-      try {
-        const analysisResult = JSON.parse(content);
-        return analysisResult;
-      } catch (parseError) {
-        // Fallback if JSON parsing fails
-        return {
-          name: "Unknown Product",
-          brand: "Unknown Brand",
-          category: "General Item",
-          recyclability: "Check local guidelines",
-          ecoScore: 50,
-          description:
-            "Product analysis incomplete. Please try again with a clearer image.",
-          suggestions: [
-            "Check product packaging for recycling symbols",
-            "Consider eco-friendly alternatives",
-          ],
-          confidence: 30,
-        };
+      // Convert relative photoUri to absolute URL
+      if (result.photoUri && !result.photoUri.startsWith("http")) {
+        result.photoUri = `${API_BASE_URL}${result.photoUri}`;
       }
+
+      return result;
     } catch (error) {
-      console.error("Error analyzing image with OpenAI:", error);
+      console.error("Error analyzing image:", error);
       throw error;
     }
   }
 
-  private static async convertImageToBase64(imageUri: string): Promise<string> {
+  // Get user's scan history
+  static async getUserScans(userId: number): Promise<ProductAnalysisResult[]> {
     try {
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
+      const response = await fetch(`${API_BASE_URL}/users/${userId}/scans`);
 
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result as string;
-          // Remove the data:image/jpeg;base64, prefix
-          const base64Data = base64.split(",")[1];
-          resolve(base64Data);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to fetch user scans");
+      }
+
+      const scans = await response.json();
+
+      // Convert relative photoUri to absolute URL for each scan
+      return scans.map((scan: ProductAnalysisResult) => ({
+        ...scan,
+        photoUri:
+          scan.photoUri && !scan.photoUri.startsWith("http")
+            ? `${API_BASE_URL}${scan.photoUri}`
+            : scan.photoUri,
+      }));
     } catch (error) {
-      console.error("Error converting image to base64:", error);
+      console.error("Error fetching user scans:", error);
       throw error;
     }
   }

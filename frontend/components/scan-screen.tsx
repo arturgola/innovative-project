@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import { ApiService } from "../services/api";
+import { useAppContext } from "../contexts/app-context";
 
 interface ScanScreenProps {
   onBack: () => void;
@@ -32,6 +33,7 @@ const ScanScreen = ({
   const cameraRef = useRef<CameraView>(null);
   const pulseAnim = useState(new Animated.Value(0))[0];
   const scanLineAnim = useState(new Animated.Value(0))[0];
+  const { userProfile } = useAppContext();
 
   useEffect(() => {
     if (isScanning) {
@@ -107,34 +109,17 @@ const ScanScreen = ({
       );
 
       try {
-        // First, get object and material analysis
-        const objectMaterialResult = await ApiService.analyzeObjectMaterial(
-          photo.uri
+        // Analyze the image using the backend API, passing user ID if available
+        const analysisResult = await ApiService.analyzeProductImage(
+          photo.uri,
+          userProfile.id
         );
 
-        // Then analyze the image with full OpenAI analysis
-        const analysisResult = await ApiService.analyzeProductImage(photo.uri);
-
-        // Create a product object with the analysis results
+        // Add the photo dimensions to the result
         const productWithAnalysis = {
-          id: Date.now(),
-          name: analysisResult.name,
-          brand: analysisResult.brand,
-          category: analysisResult.category,
-          barcode: "camera-scanned",
-          points: Math.floor(analysisResult.ecoScore / 2), // Convert eco score to points
-          rating: analysisResult.ecoScore,
-          description: `${objectMaterialResult.shortDescription} - ${analysisResult.description}`,
-          scannedAt: new Date().toISOString(),
-          photoUri: photo.uri,
+          ...analysisResult,
           photoWidth: photo.width,
           photoHeight: photo.height,
-          recyclability: analysisResult.recyclability,
-          ecoScore: analysisResult.ecoScore,
-          suggestions: analysisResult.suggestions,
-          confidence: analysisResult.confidence,
-          analysisMethod: "openai-vision",
-          objectMaterial: objectMaterialResult.shortDescription,
         };
 
         setIsScanning(false);
@@ -142,30 +127,44 @@ const ScanScreen = ({
       } catch (analysisError) {
         console.error("Analysis error:", analysisError);
 
-        // Fallback to basic product info if OpenAI analysis fails
-        const basicProduct = {
-          id: Date.now(),
-          name: "Scanned Product",
-          brand: "Unknown Brand",
-          category: "General Item",
-          barcode: "camera-scanned",
-          points: Math.floor(Math.random() * 50) + 10,
-          rating: 0,
-          description: "Product scanned via camera. AI analysis unavailable.",
-          scannedAt: new Date().toISOString(),
-          photoUri: photo.uri,
-          photoWidth: photo.width,
-          photoHeight: photo.height,
-          analysisMethod: "basic",
-        };
+        // Check if we got a fallback result from the backend
+        if (
+          analysisError instanceof Error &&
+          analysisError.message.includes("Analysis failed")
+        ) {
+          // Try to get fallback data from error response if available
+          const fallbackProduct = {
+            id: Date.now(),
+            name: "Scanned Product",
+            brand: "Unknown Brand",
+            category: "General Item",
+            barcode: "camera-scanned",
+            points: Math.floor(Math.random() * 50) + 10,
+            rating: 0,
+            description: "Product scanned via camera. AI analysis unavailable.",
+            scannedAt: new Date().toISOString(),
+            photoUri: photo.uri,
+            photoWidth: photo.width,
+            photoHeight: photo.height,
+            recyclability: "Check local guidelines",
+            ecoScore: 0,
+            suggestions: ["Check product packaging for recycling symbols"],
+            confidence: 0,
+            analysisMethod: "basic",
+            objectMaterial: "unknown object",
+          };
 
-        setIsScanning(false);
-        Alert.alert(
-          "Analysis Failed",
-          "Unable to analyze the product with AI. Basic scan completed.",
-          [{ text: "OK" }]
-        );
-        onScanComplete(basicProduct);
+          setIsScanning(false);
+          Alert.alert(
+            "Analysis Failed",
+            "Unable to analyze the product with AI. Basic scan completed.",
+            [{ text: "OK" }]
+          );
+          onScanComplete(fallbackProduct);
+        } else {
+          setIsScanning(false);
+          Alert.alert("Error", "Failed to analyze product. Please try again.");
+        }
       }
     } catch (error) {
       setIsScanning(false);

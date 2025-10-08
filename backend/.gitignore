@@ -21,3 +21,6 @@ yarn-error.log*
 
 # Database files
 data.db
+
+# Upload directories
+uploads/

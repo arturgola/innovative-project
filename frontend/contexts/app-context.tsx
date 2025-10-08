@@ -118,30 +118,24 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const addScannedProduct = async (product: Product) => {
     setScannedProducts((prev) => [...prev, product]);
 
-    // Update user profile with points and scan count
-    const newTotalPoints = userProfile.totalPoints + product.points;
-    const newScansToday = userProfile.scansToday + 1;
-    const newLevel = Math.floor(newTotalPoints / 100) + 1;
-
-    const updatedProfile = {
-      ...userProfile,
-      totalPoints: newTotalPoints,
-      scansToday: newScansToday,
-      level: newLevel,
-    };
-
-    setUserProfile(updatedProfile);
-
-    // Update in database
+    // If user has an ID, refresh their profile from the backend to get updated stats
     if (userProfile.id) {
       try {
-        await updateUserProfile({
+        const updatedUser = await ApiService.getUserById(userProfile.id);
+        setUserProfile(updatedUser);
+      } catch (error) {
+        console.error("Error refreshing user profile:", error);
+        // Fallback: update local state manually
+        const newTotalPoints = userProfile.totalPoints + product.points;
+        const newScansToday = userProfile.scansToday + 1;
+        const newLevel = Math.floor(newTotalPoints / 100) + 1;
+
+        setUserProfile({
+          ...userProfile,
           totalPoints: newTotalPoints,
           scansToday: newScansToday,
           level: newLevel,
         });
-      } catch (error) {
-        console.error("Error updating user stats:", error);
       }
     }
   };

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,55 +6,90 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-
-interface Product {
-  id: number;
-  name: string;
-  brand: string;
-  category: string;
-  barcode: string;
-  points: number;
-  rating: number;
-  description: string;
-  scannedAt: string;
-}
+import { ApiService, ProductAnalysisResult } from "../services/api";
+import { useAppContext } from "../contexts/app-context";
 
 interface StatisticsScreenProps {
   onBack: () => void;
-  scannedProducts: Product[];
-  onViewProduct: (product: Product) => void;
+  onViewProduct: (product: ProductAnalysisResult) => void;
 }
 
-const StatisticsScreen = ({ onBack, scannedProducts, onViewProduct }: StatisticsScreenProps) => {
+const StatisticsScreen = ({ onBack, onViewProduct }: StatisticsScreenProps) => {
+  const { userProfile } = useAppContext();
+  const [scannedProducts, setScannedProducts] = useState<
+    ProductAnalysisResult[]
+  >([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchUserScans();
+  }, [userProfile.id]);
+
+  const fetchUserScans = async () => {
+    if (!userProfile.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      const scans = await ApiService.getUserScans(userProfile.id);
+      setScannedProducts(scans);
+    } catch (err) {
+      console.error("Error fetching user scans:", err);
+      setError("Failed to load scan history");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getCategoryStats = () => {
-    const categories = scannedProducts.reduce((acc, product) => {
-      acc[product.category] = (acc[product.category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    return Object.entries(categories).map(([category, count]) => ({ category, count }));
+    const categories = scannedProducts.reduce(
+      (acc: Record<string, number>, product) => {
+        acc[product.category] = (acc[product.category] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
+
+    return Object.entries(categories).map(([category, count]) => ({
+      category,
+      count,
+    }));
   };
 
   const getTotalPoints = () => {
-    return scannedProducts.reduce((total, product) => total + product.points, 0);
+    return scannedProducts.reduce(
+      (total: number, product) => total + product.points,
+      0
+    );
   };
 
   const categoryStats = getCategoryStats();
   const totalPoints = getTotalPoints();
 
-  const renderProduct = ({ item: product, index }: { item: Product; index: number }) => (
+  const renderProduct = ({
+    item: product,
+    index,
+  }: {
+    item: ProductAnalysisResult;
+    index: number;
+  }) => (
     <View style={styles.productCard}>
       <View style={styles.productContent}>
         <View style={styles.productInfo}>
@@ -63,11 +98,15 @@ const StatisticsScreen = ({ onBack, scannedProducts, onViewProduct }: Statistics
               <Ionicons name="cube" size={24} color="#9ca3af" />
             </View>
             <View style={styles.productTitleContainer}>
-              <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-              <Text style={styles.productBrand} numberOfLines={1}>{product.brand}</Text>
+              <Text style={styles.productName} numberOfLines={1}>
+                {product.name}
+              </Text>
+              <Text style={styles.productBrand} numberOfLines={1}>
+                {product.brand}
+              </Text>
             </View>
           </View>
-          
+
           <View style={styles.productMeta}>
             <View style={styles.productMetaLeft}>
               <View style={styles.categoryBadge}>
@@ -75,7 +114,9 @@ const StatisticsScreen = ({ onBack, scannedProducts, onViewProduct }: Statistics
               </View>
               <View style={styles.dateContainer}>
                 <Ionicons name="calendar" size={12} color="#6b7280" />
-                <Text style={styles.dateText}>{formatDate(product.scannedAt)}</Text>
+                <Text style={styles.dateText}>
+                  {formatDate(product.scannedAt)}
+                </Text>
               </View>
             </View>
             <View style={styles.pointsContainer}>
@@ -84,7 +125,7 @@ const StatisticsScreen = ({ onBack, scannedProducts, onViewProduct }: Statistics
             </View>
           </View>
         </View>
-        
+
         <TouchableOpacity
           onPress={() => onViewProduct(product)}
           style={styles.viewButton}
@@ -95,7 +136,11 @@ const StatisticsScreen = ({ onBack, scannedProducts, onViewProduct }: Statistics
     </View>
   );
 
-  const renderCategoryItem = ({ item }: { item: { category: string; count: number } }) => (
+  const renderCategoryItem = ({
+    item,
+  }: {
+    item: { category: string; count: number };
+  }) => (
     <View style={styles.categoryItem}>
       <Text style={styles.categoryLabel}>{item.category}</Text>
       <View style={styles.categoryCountBadge}>
@@ -116,74 +161,105 @@ const StatisticsScreen = ({ onBack, scannedProducts, onViewProduct }: Statistics
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Overview stats */}
-        <View style={styles.statsGrid}>
-          <LinearGradient
-            colors={["rgba(99, 102, 241, 0.1)", "rgba(99, 102, 241, 0.05)"]}
-            style={styles.statCard}
-          >
-            <View style={styles.statContent}>
-              <View style={styles.statIcon}>
-                <Ionicons name="cube" size={20} color="#6366f1" />
-              </View>
-              <View style={styles.statInfo}>
-                <Text style={styles.statValue}>{scannedProducts.length}</Text>
-                <Text style={styles.statLabel}>Total Scans</Text>
-              </View>
-            </View>
-          </LinearGradient>
-
-          <LinearGradient
-            colors={["rgba(168, 85, 247, 0.1)", "rgba(168, 85, 247, 0.05)"]}
-            style={styles.statCard}
-          >
-            <View style={styles.statContent}>
-              <View style={[styles.statIcon, { backgroundColor: "rgba(168, 85, 247, 0.2)" }]}>
-                <Ionicons name="diamond" size={20} color="#a855f7" />
-              </View>
-              <View style={styles.statInfo}>
-                <Text style={styles.statValue}>{totalPoints}</Text>
-                <Text style={styles.statLabel}>Points Earned</Text>
-              </View>
-            </View>
-          </LinearGradient>
-        </View>
-
-        {/* Category breakdown */}
-        {categoryStats.length > 0 && (
-          <View style={styles.categorySection}>
-            <Text style={styles.sectionTitle}>Categories Scanned</Text>
-            <View style={styles.categoryCard}>
-              <FlatList
-                data={categoryStats}
-                renderItem={renderCategoryItem}
-                keyExtractor={(item) => item.category}
-                scrollEnabled={false}
-              />
-            </View>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366f1" />
+            <Text style={styles.loadingText}>Loading scan history...</Text>
           </View>
-        )}
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={48} color="#ef4444" />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity
+              onPress={fetchUserScans}
+              style={styles.retryButton}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {/* Overview stats */}
+            <View style={styles.statsGrid}>
+              <LinearGradient
+                colors={["rgba(99, 102, 241, 0.1)", "rgba(99, 102, 241, 0.05)"]}
+                style={styles.statCard}
+              >
+                <View style={styles.statContent}>
+                  <View style={styles.statIcon}>
+                    <Ionicons name="cube" size={20} color="#6366f1" />
+                  </View>
+                  <View style={styles.statInfo}>
+                    <Text style={styles.statValue}>
+                      {scannedProducts.length}
+                    </Text>
+                    <Text style={styles.statLabel}>Total Scans</Text>
+                  </View>
+                </View>
+              </LinearGradient>
 
-        {/* Recent scans */}
-        <View style={styles.recentSection}>
-          <Text style={styles.sectionTitle}>Recent Scans</Text>
-          
-          {scannedProducts.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="cube" size={48} color="#9ca3af" />
-              <Text style={styles.emptyStateText}>No products scanned yet</Text>
-              <Text style={styles.emptyStateSubtext}>Start scanning to see your history</Text>
+              <LinearGradient
+                colors={["rgba(168, 85, 247, 0.1)", "rgba(168, 85, 247, 0.05)"]}
+                style={styles.statCard}
+              >
+                <View style={styles.statContent}>
+                  <View
+                    style={[
+                      styles.statIcon,
+                      { backgroundColor: "rgba(168, 85, 247, 0.2)" },
+                    ]}
+                  >
+                    <Ionicons name="diamond" size={20} color="#a855f7" />
+                  </View>
+                  <View style={styles.statInfo}>
+                    <Text style={styles.statValue}>{totalPoints}</Text>
+                    <Text style={styles.statLabel}>Points Earned</Text>
+                  </View>
+                </View>
+              </LinearGradient>
             </View>
-          ) : (
-            <FlatList
-              data={scannedProducts.slice().reverse()}
-              renderItem={renderProduct}
-              keyExtractor={(item) => item.id.toString()}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
-        </View>
+
+            {/* Category breakdown */}
+            {categoryStats.length > 0 && (
+              <View style={styles.categorySection}>
+                <Text style={styles.sectionTitle}>Categories Scanned</Text>
+                <View style={styles.categoryCard}>
+                  <FlatList
+                    data={categoryStats}
+                    renderItem={renderCategoryItem}
+                    keyExtractor={(item) => item.category}
+                    scrollEnabled={false}
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Recent scans */}
+            <View style={styles.recentSection}>
+              <Text style={styles.sectionTitle}>Recent Scans</Text>
+
+              {scannedProducts.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="cube" size={48} color="#9ca3af" />
+                  <Text style={styles.emptyStateText}>
+                    No products scanned yet
+                  </Text>
+                  <Text style={styles.emptyStateSubtext}>
+                    Start scanning to see your history
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={scannedProducts.slice().reverse()}
+                  renderItem={renderProduct}
+                  keyExtractor={(item) => item.id.toString()}
+                  scrollEnabled={false}
+                  showsVerticalScrollIndicator={false}
+                />
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -412,6 +488,41 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "rgba(99, 102, 241, 0.1)",
     marginLeft: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#6b7280",
+    marginTop: 16,
+  },
+  errorContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#ef4444",
+    textAlign: "center",
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: "#6366f1",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "500",
   },
 });
 

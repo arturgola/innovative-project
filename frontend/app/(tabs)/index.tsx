@@ -5,8 +5,7 @@ import LoadingScreen from "@/components/loading-screen";
 import { useAppContext } from "../../contexts/app-context";
 
 export default function HomeScreen() {
-  const { userProfile, scannedProducts, isLoadingUser, hasUser } =
-    useAppContext();
+  const { userProfile, isLoadingUser, hasUser } = useAppContext();
 
   useEffect(() => {
     if (!isLoadingUser && !hasUser) {
@@ -42,7 +41,7 @@ export default function HomeScreen() {
       onScan={handleScan}
       onStatistics={handleStatistics}
       onProfile={handleProfile}
-      scanCount={scannedProducts.length}
+      scanCount={userProfile.scansToday}
       userProfile={userProfile}
     />
   );

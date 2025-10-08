@@ -148,6 +148,23 @@ interface ProductAnalysisResult {
 - Current model used: `gpt-4o-mini` (cost-effective option)
 - Consider implementing usage limits for production apps
 
+#### API Calls Per Photo Analysis
+
+**The app makes exactly 2 OpenAI API calls each time a photo is taken:**
+
+1. **First Call - Object/Material Analysis**:
+
+   - Cost-efficient call with max 50 tokens
+   - Quick object type and material identification
+   - Returns simple descriptions like "plastic bottle", "aluminum can"
+
+2. **Second Call - Comprehensive Analysis**:
+   - Detailed analysis with max 1000 tokens
+   - Complete sustainability assessment including brand, eco-score, recyclability
+   - Returns structured JSON with all product information
+
+**Total Cost**: Approximately $0.01-0.02 USD per photo analysis (both calls combined)
+
 ## Testing
 
 1. Make sure your OpenAI API key is properly configured

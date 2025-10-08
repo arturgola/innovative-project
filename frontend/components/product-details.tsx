@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Share,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,6 +21,16 @@ interface Product {
   rating: number;
   description: string;
   scannedAt: string;
+  photoUri?: string;
+  photoWidth?: number;
+  photoHeight?: number;
+  // AI Analysis fields
+  recyclability?: string;
+  ecoScore?: number;
+  suggestions?: string[];
+  confidence?: number;
+  analysisMethod?: "openai-vision" | "basic" | "barcode";
+  objectMaterial?: string;
 }
 
 interface ProductDetailsProps {
@@ -76,14 +87,32 @@ const ProductDetails = ({
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Product image placeholder */}
-        <LinearGradient
-          colors={["#f8fafc", "#f1f5f9"]}
-          style={styles.productImageCard}
-        >
-          <Ionicons name="cube" size={96} color="#9ca3af" />
-          <Text style={styles.imagePlaceholderText}>Product Image</Text>
-        </LinearGradient>
+        {/* Product image */}
+        <View style={styles.productImageContainer}>
+          {product.photoUri ? (
+            <Image
+              source={{ uri: product.photoUri }}
+              style={styles.productImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <LinearGradient
+              colors={["#f8fafc", "#f1f5f9"]}
+              style={styles.productImageCard}
+            >
+              <Ionicons name="cube" size={96} color="#9ca3af" />
+              <Text style={styles.imagePlaceholderText}>Product Image</Text>
+            </LinearGradient>
+          )}
+          {product.photoUri && (
+            <View style={styles.imageOverlay}>
+              <View style={styles.cameraIndicator}>
+                <Ionicons name="camera" size={16} color="#ffffff" />
+                <Text style={styles.cameraText}>Scanned Image</Text>
+              </View>
+            </View>
+          )}
+        </View>
 
         {/* Product info */}
         <View style={styles.productInfo}>
@@ -128,9 +157,86 @@ const ProductDetails = ({
               <Ionicons name="calendar" size={16} color="#6b7280" />
               <Text style={styles.detailLabel}>Scanned</Text>
             </View>
-            <Text style={styles.detailValue}>{formatDate(product.scannedAt)}</Text>
+            <Text style={styles.detailValue}>
+              {formatDate(product.scannedAt)}
+            </Text>
           </View>
         </View>
+
+        {/* AI Analysis Information */}
+        {product.ecoScore !== undefined && (
+          <View style={styles.aiAnalysisCard}>
+            <Text style={styles.aiAnalysisTitle}>
+              AI Environmental Analysis
+            </Text>
+
+            {product.objectMaterial && (
+              <View style={styles.analysisRow}>
+                <Text style={styles.analysisLabel}>Material Type</Text>
+                <Text style={styles.analysisValue}>
+                  {product.objectMaterial}
+                </Text>
+              </View>
+            )}
+
+            {product.ecoScore !== undefined && (
+              <View style={styles.analysisRow}>
+                <Text style={styles.analysisLabel}>Eco Score</Text>
+                <View style={styles.ecoScoreContainer}>
+                  <Text style={styles.ecoScoreValue}>
+                    {product.ecoScore}/100
+                  </Text>
+                  <View style={styles.ecoScoreBar}>
+                    <View
+                      style={[
+                        styles.ecoScoreFill,
+                        {
+                          width: `${product.ecoScore}%`,
+                          backgroundColor:
+                            product.ecoScore >= 70
+                              ? "#10b981"
+                              : product.ecoScore >= 40
+                              ? "#f59e0b"
+                              : "#ef4444",
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {product.recyclability && (
+              <View style={styles.analysisRow}>
+                <Text style={styles.analysisLabel}>Recyclability</Text>
+                <Text style={styles.analysisValue}>
+                  {product.recyclability}
+                </Text>
+              </View>
+            )}
+
+            {product.confidence !== undefined && (
+              <View style={styles.analysisRowLast}>
+                <Text style={styles.analysisLabel}>AI Confidence</Text>
+                <Text style={styles.analysisValue}>{product.confidence}%</Text>
+              </View>
+            )}
+
+            {product.suggestions && product.suggestions.length > 0 && (
+              <View style={styles.suggestionsSection}>
+                <Text style={styles.suggestionsTitle}>
+                  Eco-Friendly Suggestions
+                </Text>
+                {product.suggestions.map((suggestion, index) => (
+                  <View key={index} style={styles.suggestionItem}>
+                    <Ionicons name="leaf" size={14} color="#10b981" />
+                    <Text style={styles.suggestionText}>{suggestion}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Actions */}
         <View style={styles.actionsContainer}>
@@ -145,7 +251,10 @@ const ProductDetails = ({
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleShare} style={styles.secondaryButton}>
+          <TouchableOpacity
+            onPress={handleShare}
+            style={styles.secondaryButton}
+          >
             <Text style={styles.secondaryButtonText}>Share Product</Text>
           </TouchableOpacity>
         </View>
@@ -356,6 +465,138 @@ const styles = StyleSheet.create({
     color: "#374151",
     fontSize: 18,
     fontWeight: "600",
+  },
+  productImageContainer: {
+    position: "relative",
+    marginHorizontal: 24,
+    marginTop: 16,
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  productImage: {
+    width: "100%",
+    height: 250,
+    backgroundColor: "#f9fafb",
+  },
+  imageOverlay: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+  },
+  cameraIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  cameraText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "500",
+    marginLeft: 6,
+  },
+  aiAnalysisCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    marginHorizontal: 24,
+    marginTop: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  aiAnalysisTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1f2937",
+    marginBottom: 16,
+  },
+  analysisRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(229, 231, 235, 0.5)",
+  },
+  analysisRowLast: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  analysisLabel: {
+    fontSize: 14,
+    color: "#6b7280",
+    flex: 1,
+  },
+  analysisValue: {
+    fontSize: 14,
+    color: "#1f2937",
+    fontWeight: "500",
+    textAlign: "right",
+  },
+  ecoScoreContainer: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  ecoScoreValue: {
+    fontSize: 14,
+    color: "#1f2937",
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  ecoScoreBar: {
+    width: 100,
+    height: 6,
+    backgroundColor: "#e5e7eb",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  ecoScoreFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  suggestionsSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(229, 231, 235, 0.5)",
+  },
+  suggestionsTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1f2937",
+    marginBottom: 12,
+  },
+  suggestionItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: "#374151",
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 20,
   },
 });
 

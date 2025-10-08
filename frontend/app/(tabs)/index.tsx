@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { router } from "expo-router";
 import MainMenu from "@/components/main-menu";
 import LoadingScreen from "@/components/loading-screen";
-import { useAppContext } from "../contexts/app-context";
+import { useAppContext } from "../../contexts/app-context";
 
 export default function HomeScreen() {
   const { userProfile, scannedProducts, isLoadingUser, hasUser } =

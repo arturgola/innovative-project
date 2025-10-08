@@ -1,7 +1,7 @@
 import React from "react";
 import { router } from "expo-router";
 import UserProfile from "@/components/user-profile";
-import { useAppContext } from "./contexts/app-context";
+import { useAppContext } from "../contexts/app-context";
 
 export default function UserProfilePage() {
   const { userProfile, updateUserProfile } = useAppContext();

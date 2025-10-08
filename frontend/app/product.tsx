@@ -1,7 +1,7 @@
 import React from "react";
 import { router } from "expo-router";
 import ProductDetails from "@/components/product-details";
-import { useAppContext } from "./contexts/app-context";
+import { useAppContext } from "../contexts/app-context";
 
 export default function ProductPage() {
   const { currentProduct } = useAppContext();

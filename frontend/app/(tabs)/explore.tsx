@@ -1,8 +1,8 @@
 import React from "react";
 import { router } from "expo-router";
 import StatisticsScreen from "@/components/statistics-screen";
-import { useAppContext } from "../contexts/app-context";
-import { Product } from "../types";
+import { useAppContext } from "../../contexts/app-context";
+import { Product } from "../../types";
 
 export default function TabTwoScreen() {
   const { scannedProducts, setCurrentProduct, isLoadingUser, hasUser } =

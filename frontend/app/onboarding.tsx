@@ -1,7 +1,7 @@
 import React from "react";
 import { router } from "expo-router";
 import CreateUserScreen from "@/components/create-user";
-import { useAppContext } from "./contexts/app-context";
+import { useAppContext } from "../contexts/app-context";
 
 export default function OnboardingPage() {
   const { createNewUser, isLoadingUser } = useAppContext();

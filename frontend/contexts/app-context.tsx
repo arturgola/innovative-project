@@ -6,7 +6,7 @@ import React, {
   useEffect,
 } from "react";
 import { Product, UserProfile } from "../types";
-import { ApiService } from "../../services/api";
+import { ApiService } from "../services/api";
 
 interface AppState {
   currentProduct: Product | null;

@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from "react";
 import { router, useFocusEffect } from "expo-router";
 import ScanScreen from "@/components/scan-screen";
-import { useAppContext } from "./contexts/app-context";
-import { Product } from "./types";
+import { useAppContext } from "../contexts/app-context";
+import { Product } from "../types";
 
 export default function ScanPage() {
   const { setCurrentProduct, addScannedProduct } = useAppContext();

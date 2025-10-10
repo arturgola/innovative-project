@@ -530,6 +530,8 @@ app.delete("/users/:id", (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Backend running at http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Backend running at http://0.0.0.0:${PORT}`);
+  console.log(`Local access: http://localhost:${PORT}`);
+  console.log(`Network access: http://192.168.1.145:${PORT}`);
 });

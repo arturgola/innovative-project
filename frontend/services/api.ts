@@ -131,11 +131,12 @@ export class ApiService {
       // Create FormData for image upload
       const formData = new FormData();
 
-      // Convert the image URI to a blob and append to form data
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
-
-      formData.append("image", blob, "product-image.jpg");
+      // For React Native, we need to use a different approach for local file URIs
+      formData.append("image", {
+        uri: imageUri,
+        type: "image/jpeg",
+        name: "product-image.jpg",
+      } as any);
 
       if (userId) {
         formData.append("userId", userId.toString());

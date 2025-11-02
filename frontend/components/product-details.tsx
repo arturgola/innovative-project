@@ -120,7 +120,7 @@ const ProductDetails = ({
         {/* Enhanced Description with AI Analysis */}
         <View style={styles.descriptionCard}>
           <Text style={styles.descriptionTitle}>Product Analysis</Text>
-          
+
           {/* OpenAI Analysis */}
           <View style={styles.analysisSection}>
             <View style={styles.analysisSectionHeader}>
@@ -134,74 +134,99 @@ const ProductDetails = ({
           {product.wasteGuideMatch && (
             <View style={styles.analysisSection}>
               <View style={styles.analysisSectionHeader}>
-              <Ionicons name="leaf" size={20} color="#10b981" />
-                <Text style={styles.analysisSectionTitle}>Waste Disposal Guide</Text>
+                <Ionicons name="leaf" size={20} color="#10b981" />
+                <Text style={styles.analysisSectionTitle}>
+                  Waste Disposal Guide
+                </Text>
                 <View style={styles.matchScoreBadge}>
                   <Text style={styles.matchScoreText}>
                     {product.wasteGuideMatch.matchScore}% match
                   </Text>
                 </View>
               </View>
-              
-              <Text style={styles.hsyTitle}>{product.wasteGuideMatch.title}</Text>
-              
-              {product.wasteGuideMatch.synonyms && product.wasteGuideMatch.synonyms.length > 0 && (
-                <View style={styles.synonymsContainer}>
-                  <Text style={styles.synonymsLabel}>Also known as:</Text>
-                  <Text style={styles.synonymsText}>
-                    {product.wasteGuideMatch.synonyms.join(", ")}
-                  </Text>
-                </View>
-              )}
+
+              <Text style={styles.hsyTitle}>
+                {product.wasteGuideMatch.title}
+              </Text>
+
+              {product.wasteGuideMatch.synonyms &&
+                product.wasteGuideMatch.synonyms.length > 0 && (
+                  <View style={styles.synonymsContainer}>
+                    <Text style={styles.synonymsLabel}>Also known as:</Text>
+                    <Text style={styles.synonymsText}>
+                      {product.wasteGuideMatch.synonyms.join(", ")}
+                    </Text>
+                  </View>
+                )}
 
               {product.wasteGuideMatch.notes && (
                 <View style={styles.notesContainer}>
                   <Text style={styles.notesText}>
-                    {product.wasteGuideMatch.notes.replace(/<[^>]*>/g, '')}
+                    {product.wasteGuideMatch.notes.replace(/<[^>]*>/g, "")}
                   </Text>
                 </View>
               )}
 
               {/* Waste Types */}
-              {product.wasteGuideMatch.wasteTypes && product.wasteGuideMatch.wasteTypes.length > 0 && (
-                <View style={styles.wasteTypesContainer}>
-                  <Text style={styles.sectionSubtitle}>Waste Classification:</Text>
-                  {product.wasteGuideMatch.wasteTypes.map((wasteType, index) => (
-                    <View key={index} style={styles.wasteTypeItem}>
-                      <Ionicons name="information-circle" size={16} color="#6b7280" />
-                      <View style={styles.wasteTypeContent}>
-                        <Text style={styles.wasteTypeTitle}>{wasteType.title}</Text>
-                        <Text style={styles.wasteTypeDescription}>{wasteType.description}</Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
+              {product.wasteGuideMatch.wasteTypes &&
+                product.wasteGuideMatch.wasteTypes.length > 0 && (
+                  <View style={styles.wasteTypesContainer}>
+                    <Text style={styles.sectionSubtitle}>
+                      Waste Classification:
+                    </Text>
+                    {product.wasteGuideMatch.wasteTypes.map(
+                      (wasteType, index) => (
+                        <View key={index} style={styles.wasteTypeItem}>
+                          <Ionicons
+                            name="information-circle"
+                            size={16}
+                            color="#6b7280"
+                          />
+                          <View style={styles.wasteTypeContent}>
+                            <Text style={styles.wasteTypeTitle}>
+                              {wasteType.title}
+                            </Text>
+                            <Text style={styles.wasteTypeDescription}>
+                              {wasteType.description}
+                            </Text>
+                          </View>
+                        </View>
+                      )
+                    )}
+                  </View>
+                )}
 
               {/* Recycling Methods */}
-              {product.wasteGuideMatch.recyclingMethods && product.wasteGuideMatch.recyclingMethods.length > 0 && (
-                <View style={styles.recyclingMethodsContainer}>
-                  <Text style={styles.sectionSubtitle}>Disposal Options:</Text>
-                  {product.wasteGuideMatch.recyclingMethods.slice(0, 3).map((method, index) => (
-                    <View key={index} style={styles.recyclingMethodItem}>
-                      <Ionicons 
-                        name={method.isFree ? "checkmark-circle" : "card"} 
-                        size={16} 
-                        color={method.isFree ? "#10b981" : "#f59e0b"} 
-                      />
-                      <View style={styles.recyclingMethodContent}>
-                        <Text style={styles.recyclingMethodTitle}>{method.title}</Text>
-                        <Text style={styles.recyclingMethodDescription}>
-                          {method.description}
-                        </Text>
-                        {method.isFree && (
-                          <Text style={styles.freeTag}>Free of charge</Text>
-                        )}
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
+              {product.wasteGuideMatch.recyclingMethods &&
+                product.wasteGuideMatch.recyclingMethods.length > 0 && (
+                  <View style={styles.recyclingMethodsContainer}>
+                    <Text style={styles.sectionSubtitle}>
+                      Disposal Options:
+                    </Text>
+                    {product.wasteGuideMatch.recyclingMethods
+                      .slice(0, 3)
+                      .map((method, index) => (
+                        <View key={index} style={styles.recyclingMethodItem}>
+                          <Ionicons
+                            name={method.isFree ? "checkmark-circle" : "card"}
+                            size={16}
+                            color={method.isFree ? "#10b981" : "#f59e0b"}
+                          />
+                          <View style={styles.recyclingMethodContent}>
+                            <Text style={styles.recyclingMethodTitle}>
+                              {method.title}
+                            </Text>
+                            <Text style={styles.recyclingMethodDescription}>
+                              {method.description}
+                            </Text>
+                            {method.isFree && (
+                              <Text style={styles.freeTag}>Free of charge</Text>
+                            )}
+                          </View>
+                        </View>
+                      ))}
+                  </View>
+                )}
             </View>
           )}
         </View>

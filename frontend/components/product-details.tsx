@@ -11,27 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
-interface Product {
-  id: number;
-  name: string;
-  brand: string;
-  category: string;
-  barcode: string;
-  points: number;
-  rating: number;
-  description: string;
-  scannedAt: string;
-  photoUri?: string;
-  photoWidth?: number;
-  photoHeight?: number;
-  // AI Analysis fields
-  recyclability?: string;
-  ecoScore?: number;
-  suggestions?: string[];
-  confidence?: number;
-  analysisMethod?: "openai-vision" | "basic" | "barcode";
-  objectMaterial?: string;
-}
+import { Product } from "../types";
 
 interface ProductDetailsProps {
   product: Product;
@@ -137,10 +117,93 @@ const ProductDetails = ({
           </View>
         </View>
 
-        {/* Description */}
+        {/* Enhanced Description with AI Analysis */}
         <View style={styles.descriptionCard}>
-          <Text style={styles.descriptionTitle}>Description</Text>
-          <Text style={styles.descriptionText}>{product.description}</Text>
+          <Text style={styles.descriptionTitle}>Product Analysis</Text>
+          
+          {/* OpenAI Analysis */}
+          <View style={styles.analysisSection}>
+            <View style={styles.analysisSectionHeader}>
+              <Ionicons name="bulb" size={20} color="#6366f1" />
+              <Text style={styles.analysisSectionTitle}>AI Analysis</Text>
+            </View>
+            <Text style={styles.descriptionText}>{product.description}</Text>
+          </View>
+
+          {/* HSY Waste Guide Match */}
+          {product.wasteGuideMatch && (
+            <View style={styles.analysisSection}>
+              <View style={styles.analysisSectionHeader}>
+              <Ionicons name="leaf" size={20} color="#10b981" />
+                <Text style={styles.analysisSectionTitle}>Waste Disposal Guide</Text>
+                <View style={styles.matchScoreBadge}>
+                  <Text style={styles.matchScoreText}>
+                    {product.wasteGuideMatch.matchScore}% match
+                  </Text>
+                </View>
+              </View>
+              
+              <Text style={styles.hsyTitle}>{product.wasteGuideMatch.title}</Text>
+              
+              {product.wasteGuideMatch.synonyms && product.wasteGuideMatch.synonyms.length > 0 && (
+                <View style={styles.synonymsContainer}>
+                  <Text style={styles.synonymsLabel}>Also known as:</Text>
+                  <Text style={styles.synonymsText}>
+                    {product.wasteGuideMatch.synonyms.join(", ")}
+                  </Text>
+                </View>
+              )}
+
+              {product.wasteGuideMatch.notes && (
+                <View style={styles.notesContainer}>
+                  <Text style={styles.notesText}>
+                    {product.wasteGuideMatch.notes.replace(/<[^>]*>/g, '')}
+                  </Text>
+                </View>
+              )}
+
+              {/* Waste Types */}
+              {product.wasteGuideMatch.wasteTypes && product.wasteGuideMatch.wasteTypes.length > 0 && (
+                <View style={styles.wasteTypesContainer}>
+                  <Text style={styles.sectionSubtitle}>Waste Classification:</Text>
+                  {product.wasteGuideMatch.wasteTypes.map((wasteType, index) => (
+                    <View key={index} style={styles.wasteTypeItem}>
+                      <Ionicons name="information-circle" size={16} color="#6b7280" />
+                      <View style={styles.wasteTypeContent}>
+                        <Text style={styles.wasteTypeTitle}>{wasteType.title}</Text>
+                        <Text style={styles.wasteTypeDescription}>{wasteType.description}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Recycling Methods */}
+              {product.wasteGuideMatch.recyclingMethods && product.wasteGuideMatch.recyclingMethods.length > 0 && (
+                <View style={styles.recyclingMethodsContainer}>
+                  <Text style={styles.sectionSubtitle}>Disposal Options:</Text>
+                  {product.wasteGuideMatch.recyclingMethods.slice(0, 3).map((method, index) => (
+                    <View key={index} style={styles.recyclingMethodItem}>
+                      <Ionicons 
+                        name={method.isFree ? "checkmark-circle" : "card"} 
+                        size={16} 
+                        color={method.isFree ? "#10b981" : "#f59e0b"} 
+                      />
+                      <View style={styles.recyclingMethodContent}>
+                        <Text style={styles.recyclingMethodTitle}>{method.title}</Text>
+                        <Text style={styles.recyclingMethodDescription}>
+                          {method.description}
+                        </Text>
+                        {method.isFree && (
+                          <Text style={styles.freeTag}>Free of charge</Text>
+                        )}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Product details */}
@@ -597,6 +660,137 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
     lineHeight: 20,
+  },
+  // Enhanced Description Styles
+  analysisSection: {
+    marginBottom: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(229, 231, 235, 0.3)",
+  },
+  analysisSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  analysisSectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1f2937",
+    marginLeft: 8,
+    flex: 1,
+  },
+  matchScoreBadge: {
+    backgroundColor: "#10b981",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  matchScoreText: {
+    fontSize: 12,
+    color: "#ffffff",
+    fontWeight: "500",
+  },
+  hsyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1f2937",
+    marginBottom: 8,
+  },
+  synonymsContainer: {
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: "#f8fafc",
+    borderRadius: 8,
+  },
+  synonymsLabel: {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  synonymsText: {
+    fontSize: 14,
+    color: "#374151",
+    fontStyle: "italic",
+  },
+  notesContainer: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: "#fef7ff",
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: "#8b5cf6",
+  },
+  notesText: {
+    fontSize: 14,
+    color: "#374151",
+    lineHeight: 20,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1f2937",
+    marginBottom: 8,
+  },
+  wasteTypesContainer: {
+    marginBottom: 16,
+  },
+  wasteTypeItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: "#fef3c7",
+    borderRadius: 8,
+  },
+  wasteTypeContent: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  wasteTypeTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#92400e",
+    marginBottom: 4,
+  },
+  wasteTypeDescription: {
+    fontSize: 13,
+    color: "#451a03",
+    lineHeight: 18,
+  },
+  recyclingMethodsContainer: {
+    marginBottom: 8,
+  },
+  recyclingMethodItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: "#ecfdf5",
+    borderRadius: 8,
+  },
+  recyclingMethodContent: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  recyclingMethodTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#065f46",
+    marginBottom: 4,
+  },
+  recyclingMethodDescription: {
+    fontSize: 13,
+    color: "#064e3b",
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  freeTag: {
+    fontSize: 12,
+    color: "#10b981",
+    fontWeight: "500",
+    fontStyle: "italic",
   },
 });
 

@@ -2,6 +2,27 @@ import { UserProfile } from "../types";
 
 const API_BASE_URL = "http://192.168.1.145:3000";
 
+interface HSYWasteGuideMatch {
+  title: string;
+  matchScore: number;
+  id: string;
+  synonyms: string[];
+  notes?: string;
+  wasteTypes?: {
+    id: string;
+    title: string;
+    description: string;
+    informationPageUrl?: string;
+  }[];
+  recyclingMethods?: {
+    id: string;
+    title: string;
+    description: string;
+    isFree: boolean;
+    infoPageUrl?: string;
+  }[];
+}
+
 export interface ProductAnalysisResult {
   id: number;
   name: string;
@@ -17,6 +38,7 @@ export interface ProductAnalysisResult {
   confidence: number;
   analysisMethod: string;
   objectMaterial: string;
+  wasteGuideMatch?: HSYWasteGuideMatch;
   photoUri: string;
   photoWidth: number;
   photoHeight: number;

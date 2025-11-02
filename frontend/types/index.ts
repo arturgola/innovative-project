@@ -1,3 +1,24 @@
+export interface HSYWasteGuideMatch {
+  title: string;
+  matchScore: number;
+  id: string;
+  synonyms: string[];
+  notes?: string;
+  wasteTypes?: {
+    id: string;
+    title: string;
+    description: string;
+    informationPageUrl?: string;
+  }[];
+  recyclingMethods?: {
+    id: string;
+    title: string;
+    description: string;
+    isFree: boolean;
+    infoPageUrl?: string;
+  }[];
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -18,6 +39,8 @@ export interface Product {
   confidence?: number;
   analysisMethod?: "openai-vision" | "basic" | "barcode";
   objectMaterial?: string;
+  // HSY Waste Guide match
+  wasteGuideMatch?: HSYWasteGuideMatch;
 }
 
 export interface UserProfile {

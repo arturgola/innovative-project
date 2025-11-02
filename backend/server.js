@@ -44,6 +44,12 @@ const upload = multer({
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 
+// HSY Waste Guide API Configuration
+const HSY_WASTE_API_URL =
+  "https://dev.klapi.hsy.fi/int2001/v1/waste-guide-api/waste-pages?lang=en";
+const HSY_CLIENT_ID = process.env.HSY_CLIENT_ID;
+const HSY_CLIENT_SECRET = process.env.HSY_CLIENT_SECRET;
+
 // Database setup
 const db = new sqlite3.Database("./data.db");
 db.run("CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, name TEXT)");
@@ -77,6 +83,7 @@ db.run(`CREATE TABLE IF NOT EXISTS product_scans (
   confidence REAL DEFAULT 0,
   analysis_method TEXT DEFAULT 'openai-vision',
   object_material TEXT,
+  waste_guide_match TEXT, -- JSON string with HSY waste guide match data
   image_path TEXT,
   photo_width INTEGER,
   photo_height INTEGER,
@@ -84,6 +91,13 @@ db.run(`CREATE TABLE IF NOT EXISTS product_scans (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users (id)
 )`);
+
+// Add waste_guide_match column to existing table if it doesn't exist
+db.run(`ALTER TABLE product_scans ADD COLUMN waste_guide_match TEXT`, (err) => {
+  if (err && !err.message.includes("duplicate column name")) {
+    console.error("Error adding waste_guide_match column:", err.message);
+  }
+});
 
 // Helper functions for OpenAI analysis
 async function convertImageToBase64(imagePath) {
@@ -93,6 +107,182 @@ async function convertImageToBase64(imagePath) {
   } catch (error) {
     console.error("Error converting image to base64:", error);
     throw error;
+  }
+}
+
+// HSY API authentication helper
+function getHSYHeaders() {
+  if (!HSY_CLIENT_ID || !HSY_CLIENT_SECRET) {
+    throw new Error(
+      "HSY credentials not configured. Please set HSY_CLIENT_ID and HSY_CLIENT_SECRET in environment variables."
+    );
+  }
+
+  return {
+    "Content-Type": "application/json",
+    client_id: HSY_CLIENT_ID,
+    client_secret: HSY_CLIENT_SECRET,
+  };
+}
+
+// Function to fetch HSY waste guide data and find matches
+async function findWasteGuideMatch(aiResponse) {
+  try {
+    console.log("Fetching HSY waste guide data...");
+
+    // Get HSY authentication headers
+    const headers = getHSYHeaders();
+
+    const response = await axios.get(HSY_WASTE_API_URL, {
+      timeout: 10000, // 10 second timeout
+      headers: headers,
+    });
+
+    const responseData = response.data;
+
+    // HSY API returns data in a 'hits' array
+    const wasteItems = responseData.hits || responseData;
+    console.log(`Found ${wasteItems.length} waste guide items`);
+
+    if (!Array.isArray(wasteItems)) {
+      console.warn("HSY API response hits is not an array:", typeof wasteItems);
+      console.log("Full response structure:", Object.keys(responseData));
+      return null;
+    }
+
+    // Extract the product name from AI response for matching
+    const aiProductName = aiResponse.name || "";
+    const aiObjectMaterial = aiResponse.objectMaterial || "";
+    const aiCategory = aiResponse.category || "";
+
+    console.log("Looking for matches with:", {
+      aiProductName,
+      aiObjectMaterial,
+      aiCategory,
+    });
+
+    // Find matches by checking titles and synonyms
+    const matches = [];
+
+    for (const item of wasteItems) {
+      if (!item.title) continue;
+
+      const itemTitle = item.title.toLowerCase();
+      const synonyms = (item.synonyms || []).map((s) => s.toLowerCase());
+      const productName = aiProductName.toLowerCase();
+      const objectMaterial = aiObjectMaterial.toLowerCase();
+      const category = aiCategory.toLowerCase();
+
+      // Calculate match score based on different criteria
+      let matchScore = 0;
+
+      // Direct title matches (highest priority)
+      if (itemTitle.includes(productName) && productName.length > 2) {
+        matchScore += 4;
+      }
+
+      // Synonym matches (high priority)
+      for (const synonym of synonyms) {
+        if (synonym.includes(productName) || productName.includes(synonym)) {
+          matchScore += 3;
+        }
+      }
+
+      // Material-based matches
+      const materialKeywords = objectMaterial.split(" ");
+      for (const keyword of materialKeywords) {
+        if (keyword.length > 2) {
+          if (itemTitle.includes(keyword)) {
+            matchScore += 2;
+          }
+          // Check synonyms for material matches
+          for (const synonym of synonyms) {
+            if (synonym.includes(keyword)) {
+              matchScore += 2;
+            }
+          }
+        }
+      }
+
+      // Category-based matches
+      if (category && category.length > 2) {
+        if (itemTitle.includes(category)) {
+          matchScore += 1;
+        }
+        for (const synonym of synonyms) {
+          if (synonym.includes(category)) {
+            matchScore += 1;
+          }
+        }
+      }
+
+      // Word-by-word matching for better accuracy
+      const titleWords = itemTitle.split(/\s+/);
+      const productWords = productName.split(/\s+/);
+
+      for (const productWord of productWords) {
+        if (productWord.length > 2) {
+          for (const titleWord of titleWords) {
+            if (
+              titleWord.includes(productWord) ||
+              productWord.includes(titleWord)
+            ) {
+              matchScore += 1;
+            }
+          }
+          // Also check synonyms
+          for (const synonym of synonyms) {
+            const synonymWords = synonym.split(/\s+/);
+            for (const synonymWord of synonymWords) {
+              if (
+                synonymWord.includes(productWord) ||
+                productWord.includes(synonymWord)
+              ) {
+                matchScore += 1;
+              }
+            }
+          }
+        }
+      }
+
+      if (matchScore > 0) {
+        matches.push({
+          ...item,
+          matchScore: matchScore,
+        });
+      }
+    }
+
+    // Sort matches by score (highest first) and return the best match
+    matches.sort((a, b) => b.matchScore - a.matchScore);
+
+    if (matches.length > 0) {
+      const bestMatch = matches[0];
+      console.log(
+        `Found best match: "${bestMatch.title}" with score ${bestMatch.matchScore}`
+      );
+      return bestMatch;
+    }
+
+    console.log("No matches found in HSY waste guide");
+    return null;
+  } catch (error) {
+    console.error("Error fetching HSY waste guide data:", error.message);
+
+    if (error.response) {
+      console.error("HSY API Response Status:", error.response.status);
+      console.error("HSY API Response Data:", error.response.data);
+    }
+
+    if (error.response && error.response.status === 401) {
+      console.error("HSY API authentication failed - check your API key");
+    } else if (error.response && error.response.status === 403) {
+      console.error(
+        "HSY API access forbidden - check your API key permissions"
+      );
+    }
+
+    return null;
   }
 }
 
@@ -262,19 +452,43 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
     // Then analyze the image with full OpenAI analysis
     const analysisResult = await analyzeProductImage(imagePath);
 
+    // Add object material to analysis result for waste guide matching
+    analysisResult.objectMaterial = objectMaterialResult.shortDescription;
+
+    // Find matching item in HSY waste guide
+    console.log("Searching for matches in HSY waste guide...");
+    const wasteGuideMatch = await findWasteGuideMatch(analysisResult);
+
+    if (wasteGuideMatch) {
+      console.log(`✅ Found HSY waste guide match: "${wasteGuideMatch.title}"`);
+    } else {
+      console.log("❌ No HSY waste guide match found");
+    }
+
     // Calculate points based on eco score
     const points = Math.floor(analysisResult.ecoScore / 2);
 
     // Save scan result to database
     const scannedAt = new Date().toISOString();
     const suggestionsJson = JSON.stringify(analysisResult.suggestions);
+    const wasteGuideMatchJson = wasteGuideMatch
+      ? JSON.stringify({
+          title: wasteGuideMatch.title,
+          matchScore: wasteGuideMatch.matchScore,
+          id: wasteGuideMatch.id,
+          synonyms: wasteGuideMatch.synonyms || [],
+          notes: wasteGuideMatch.notes || null,
+          wasteTypes: wasteGuideMatch.wasteTypes || [],
+          recyclingMethods: wasteGuideMatch.recyclingMethods || [],
+        })
+      : null;
 
     db.run(
       `INSERT INTO product_scans 
        (user_id, name, brand, category, barcode, points, rating, description, 
         recyclability, eco_score, suggestions, confidence, analysis_method, 
-        object_material, image_path, photo_width, photo_height, scanned_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        object_material, waste_guide_match, image_path, photo_width, photo_height, scanned_at) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId || null,
         analysisResult.name,
@@ -290,6 +504,7 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
         analysisResult.confidence,
         "openai-vision",
         objectMaterialResult.shortDescription,
+        wasteGuideMatchJson,
         imagePath,
         0, // photo width will be set by frontend
         0, // photo height will be set by frontend
@@ -338,6 +553,17 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
           confidence: analysisResult.confidence,
           analysisMethod: "openai-vision",
           objectMaterial: objectMaterialResult.shortDescription,
+          wasteGuideMatch: wasteGuideMatch
+            ? {
+                title: wasteGuideMatch.title,
+                matchScore: wasteGuideMatch.matchScore,
+                id: wasteGuideMatch.id,
+                synonyms: wasteGuideMatch.synonyms || [],
+                notes: wasteGuideMatch.notes || null,
+                wasteTypes: wasteGuideMatch.wasteTypes || [],
+                recyclingMethods: wasteGuideMatch.recyclingMethods || [],
+              }
+            : null,
         };
 
         res.json(productWithAnalysis);
@@ -397,6 +623,9 @@ app.get("/users/:id/scans", (req, res) => {
         confidence: row.confidence,
         analysisMethod: row.analysis_method,
         objectMaterial: row.object_material,
+        wasteGuideMatch: row.waste_guide_match
+          ? JSON.parse(row.waste_guide_match)
+          : null,
         photoUri: `/uploads/${path.basename(row.image_path)}`,
         photoWidth: row.photo_width,
         photoHeight: row.photo_height,
@@ -410,6 +639,99 @@ app.get("/users/:id/scans", (req, res) => {
 
 // Serve uploaded images
 app.use("/uploads", express.static("uploads"));
+
+// HSY Waste Guide API endpoint for testing
+app.get("/waste-guide", async (req, res) => {
+  try {
+    // Get HSY authentication headers
+    const headers = getHSYHeaders();
+
+    const response = await axios.get(HSY_WASTE_API_URL, {
+      timeout: 10000,
+      headers: headers,
+    });
+    const responseData = response.data;
+    const wasteItems = responseData.hits || responseData;
+
+    res.json({
+      success: true,
+      itemCount: wasteItems.length,
+      totalResults: responseData.total || wasteItems.length,
+      items: wasteItems.slice(0, 5), // Return first 5 items as sample
+      responseStructure: Object.keys(responseData),
+    });
+  } catch (error) {
+    console.error("Error fetching HSY waste guide:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// Test waste guide matching with a search term
+app.post("/waste-guide/search", async (req, res) => {
+  try {
+    const { searchTerm } = req.body;
+
+    if (!searchTerm) {
+      return res.status(400).json({ error: "Search term is required" });
+    }
+
+    // Create a mock analysis result to test the matching
+    const mockAnalysisResult = {
+      name: searchTerm,
+      objectMaterial: searchTerm,
+      category: searchTerm,
+    };
+
+    const match = await findWasteGuideMatch(mockAnalysisResult);
+
+    res.json({
+      success: true,
+      searchTerm: searchTerm,
+      match: match,
+    });
+  } catch (error) {
+    console.error("Error searching waste guide:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// Test HSY authentication
+app.get("/hsy-auth-test", async (req, res) => {
+  try {
+    const headers = getHSYHeaders();
+
+    res.json({
+      success: true,
+      message: "HSY authentication headers configured successfully",
+      authMethod: "Client ID/Secret Headers",
+      clientId: HSY_CLIENT_ID,
+      headers: {
+        "Content-Type": headers["Content-Type"],
+        client_id: headers["client_id"],
+        client_secret: headers["client_secret"]
+          ? `${headers["client_secret"].substring(0, 6)}...`
+          : null,
+      },
+    });
+  } catch (error) {
+    console.error("HSY authentication test failed:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      authMethod: "Client ID/Secret Headers",
+      missingCredentials: {
+        clientId: !HSY_CLIENT_ID,
+        clientSecret: !HSY_CLIENT_SECRET,
+      },
+    });
+  }
+});
 
 // User Routes
 // Create a new user

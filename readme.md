@@ -153,6 +153,37 @@ cd backend
 npm install
 ```
 
+### 3. Configure Backend Environment
+
+Create a `.env` file in the `backend/` directory with the following required variables:
+
+```env
+# OpenAI Configuration (Required for AI product analysis)
+OPENAI_API_KEY=sk-proj-your-openai-api-key-here
+
+# HSY Waste Guide API Configuration (Required for waste disposal guidance)
+HSY_CLIENT_ID=your-hsy-client-id-here
+HSY_CLIENT_SECRET=your-hsy-client-secret-here
+
+# Server Configuration (Optional - defaults to 3000)
+PORT=3000
+```
+
+#### **Required API Keys:**
+
+1. **OpenAI API Key**:
+
+   - Sign up at [OpenAI Platform](https://platform.openai.com/)
+   - Create an API key in your dashboard
+   - Replace `sk-proj-your-openai-api-key-here` with your actual key
+
+2. **HSY API Credentials**:
+   - Contact Helsinki Region Environmental Services Authority (HSY)
+   - Obtain client ID and client secret for waste guide API access
+   - Replace the placeholder values with your actual credentials
+
+> **⚠️ Important**: Never commit the `.env` file to version control. It's already included in `.gitignore`.
+
 ### 3. Install frontend dependencies
 
 ```bash

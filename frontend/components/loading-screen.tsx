@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function LoadingScreen() {
   return (
-    <LinearGradient colors={["#4F46E5", "#7C3AED"]} style={styles.container}>
+    <LinearGradient colors={["#00AAA3", "#008782"]} style={styles.container}>
       <View style={styles.content}>
         <Ionicons name="scan" size={80} color="white" />
         <Text style={styles.title}>EcoScan</Text>

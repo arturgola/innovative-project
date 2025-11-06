@@ -85,7 +85,6 @@ const StatisticsScreen = ({ onBack, onViewProduct }: StatisticsScreenProps) => {
 
   const renderProduct = ({
     item: product,
-    index,
   }: {
     item: ProductAnalysisResult;
     index: number;
@@ -120,7 +119,7 @@ const StatisticsScreen = ({ onBack, onViewProduct }: StatisticsScreenProps) => {
               </View>
             </View>
             <View style={styles.pointsContainer}>
-              <Ionicons name="diamond" size={12} color="#6366f1" />
+              <Ionicons name="diamond" size={12} color="#00AAA3" />
               <Text style={styles.pointsText}>{product.points} pts</Text>
             </View>
           </View>
@@ -130,7 +129,7 @@ const StatisticsScreen = ({ onBack, onViewProduct }: StatisticsScreenProps) => {
           onPress={() => onViewProduct(product)}
           style={styles.viewButton}
         >
-          <Ionicons name="eye" size={16} color="#6366f1" />
+          <Ionicons name="eye" size={16} color="#00AAA3" />
         </TouchableOpacity>
       </View>
     </View>
@@ -163,7 +162,7 @@ const StatisticsScreen = ({ onBack, onViewProduct }: StatisticsScreenProps) => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#6366f1" />
+            <ActivityIndicator size="large" color="#00AAA3" />
             <Text style={styles.loadingText}>Loading scan history...</Text>
           </View>
         ) : error ? (
@@ -182,12 +181,12 @@ const StatisticsScreen = ({ onBack, onViewProduct }: StatisticsScreenProps) => {
             {/* Overview stats */}
             <View style={styles.statsGrid}>
               <LinearGradient
-                colors={["rgba(99, 102, 241, 0.1)", "rgba(99, 102, 241, 0.05)"]}
+                colors={["rgba(0,170,163,0.10)", "rgba(0,170,163,0.05)"]}
                 style={styles.statCard}
               >
                 <View style={styles.statContent}>
                   <View style={styles.statIcon}>
-                    <Ionicons name="cube" size={20} color="#6366f1" />
+                    <Ionicons name="cube" size={20} color="#00AAA3" />
                   </View>
                   <View style={styles.statInfo}>
                     <Text style={styles.statValue}>
@@ -199,17 +198,17 @@ const StatisticsScreen = ({ onBack, onViewProduct }: StatisticsScreenProps) => {
               </LinearGradient>
 
               <LinearGradient
-                colors={["rgba(168, 85, 247, 0.1)", "rgba(168, 85, 247, 0.05)"]}
+                colors={["rgba(100,195,205,0.10)", "rgba(100,195,205,0.05)"]}
                 style={styles.statCard}
               >
                 <View style={styles.statContent}>
                   <View
                     style={[
                       styles.statIcon,
-                      { backgroundColor: "rgba(168, 85, 247, 0.2)" },
+                      { backgroundColor: "rgba(100,195,205,0.20)" },
                     ]}
                   >
-                    <Ionicons name="diamond" size={20} color="#a855f7" />
+                    <Ionicons name="diamond" size={20} color="#64C3CD" />
                   </View>
                   <View style={styles.statInfo}>
                     <Text style={styles.statValue}>{totalPoints}</Text>
@@ -314,7 +313,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: "rgba(99, 102, 241, 0.2)",
+    backgroundColor: "rgba(0,170,163,0.20)",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -480,13 +479,13 @@ const styles = StyleSheet.create({
   pointsText: {
     fontSize: 12,
     fontWeight: "500",
-    color: "#6366f1",
+    color: "#00AAA3",
     marginLeft: 4,
   },
   viewButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "rgba(99, 102, 241, 0.1)",
+    backgroundColor: "rgba(0, 170, 163, 0.1)",
     marginLeft: 12,
   },
   loadingContainer: {
@@ -514,7 +513,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: "#6366f1",
+    backgroundColor: "#00AAA3",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

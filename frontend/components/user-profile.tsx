@@ -115,7 +115,7 @@ const UserProfileScreen = ({
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Profile header */}
         <LinearGradient
-          colors={["rgba(99, 102, 241, 0.1)", "rgba(168, 85, 247, 0.1)"]}
+          colors={["rgba(0,170,163,0.1)", "rgba(100,195,205,0.1)"]}
           style={styles.profileCard}
         >
           <View style={styles.profileHeader}>
@@ -145,9 +145,9 @@ const UserProfileScreen = ({
                     disabled={isUpdating}
                   >
                     {isUpdating ? (
-                      <ActivityIndicator size="small" color="#6366f1" />
+                      <ActivityIndicator size="small" color="#00AAA3" />
                     ) : (
-                      <Ionicons name="checkmark" size={16} color="#6366f1" />
+                      <Ionicons name="checkmark" size={16} color="#00AAA3" />
                     )}
                   </TouchableOpacity>
                 </View>
@@ -158,13 +158,13 @@ const UserProfileScreen = ({
                     onPress={() => setIsEditing(true)}
                     style={styles.editButton}
                   >
-                    <Ionicons name="create" size={16} color="#6366f1" />
+                    <Ionicons name="create" size={16} color="#00AAA3" />
                   </TouchableOpacity>
                 </View>
               )}
 
               <View style={styles.levelContainer}>
-                <Ionicons name="star" size={16} color="#a855f7" />
+                <Ionicons name="star" size={16} color="#008782" />
                 <Text style={styles.levelText}>Level {userProfile.level}</Text>
               </View>
             </View>
@@ -182,7 +182,7 @@ const UserProfileScreen = ({
             </View>
             <View style={styles.progressBar}>
               <LinearGradient
-                colors={["#6366f1", "#a855f7"]}
+                colors={["#00AAA3", "#008782"]}
                 style={[
                   styles.progressFill,
                   { width: `${getLevelProgress()}%` },
@@ -196,7 +196,7 @@ const UserProfileScreen = ({
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <View style={styles.statIcon}>
-              <Ionicons name="diamond" size={24} color="#6366f1" />
+              <Ionicons name="diamond" size={24} color="#00AAA3" />
             </View>
             <Text style={styles.statValue}>{userProfile.totalPoints}</Text>
             <Text style={styles.statLabel}>Total Points</Text>
@@ -206,10 +206,10 @@ const UserProfileScreen = ({
             <View
               style={[
                 styles.statIcon,
-                { backgroundColor: "rgba(168, 85, 247, 0.2)" },
+                { backgroundColor: "rgba(100,195,205,0.2)" },
               ]}
             >
-              <Ionicons name="trophy" size={24} color="#a855f7" />
+              <Ionicons name="trophy" size={24} color="#64C3CD" />
             </View>
             <Text style={styles.statValue}>{userProfile.scansToday}</Text>
             <Text style={styles.statLabel}>Scans Today</Text>
@@ -219,7 +219,7 @@ const UserProfileScreen = ({
         {/* Member info */}
         <View style={styles.memberCard}>
           <View style={styles.cardHeader}>
-            <Ionicons name="person" size={20} color="#6366f1" />
+            <Ionicons name="person" size={20} color="#00AAA3" />
             <Text style={styles.cardTitle}>Member Information</Text>
           </View>
 
@@ -239,7 +239,7 @@ const UserProfileScreen = ({
               <Text
                 style={[
                   styles.infoText,
-                  { color: "#6366f1", fontWeight: "500" },
+                  { color: "#00AAA3", fontWeight: "500" },
                 ]}
               >
                 Level {userProfile.level}
@@ -251,7 +251,7 @@ const UserProfileScreen = ({
         {/* Achievements */}
         <View style={styles.achievementsCard}>
           <View style={styles.cardHeader}>
-            <Ionicons name="trophy" size={20} color="#6366f1" />
+            <Ionicons name="trophy" size={20} color="#00AAA3" />
             <Text style={styles.cardTitle}>Achievements</Text>
           </View>
 
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(99, 102, 241, 0.2)",
+    borderColor: "rgba(0,170,163,0.2)",
   },
   profileHeader: {
     flexDirection: "row",
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#6366f1",
+    backgroundColor: "#00AAA3",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1f2937",
     borderBottomWidth: 1,
-    borderBottomColor: "#6366f1",
+    borderBottomColor: "#00AAA3",
     paddingBottom: 4,
     marginRight: 8,
   },
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
   levelText: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#a855f7",
+    color: "#008782",
     marginLeft: 8,
   },
   progressContainer: {
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "rgba(99, 102, 241, 0.2)",
+    backgroundColor: "rgba(0,170,163,0.2)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,

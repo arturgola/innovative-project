@@ -8,8 +8,7 @@ import { Platform } from 'react-native';
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
-/** theme colours picked from HSY website: https://www.hsy.fi/en/hsy/hsy-news/media-contacts/visual-guidelines/*
- */
+/** theme colours picked from HSY website: https://www.hsy.fi/en/hsy/hsy-news/media-contacts/visual-guidelines/**/
 export const HSY = {
   primary: "#00AAA3",
   primaryDark: "#008782",

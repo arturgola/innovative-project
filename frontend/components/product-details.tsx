@@ -77,7 +77,7 @@ const ProductDetails = ({
             />
           ) : (
             <LinearGradient
-              colors={["#f8fafc", "#f1f5f9"]}
+              colors={["#E6FAFB", "#D9F0F2"]}
               style={styles.productImageCard}
             >
               <Ionicons name="cube" size={96} color="#9ca3af" />
@@ -112,7 +112,7 @@ const ProductDetails = ({
           </View>
 
           <View style={styles.pointsSection}>
-            <Ionicons name="diamond" size={24} color="#6366f1" />
+            <Ionicons name="diamond" size={24} color="#00AAA3" />
             <Text style={styles.pointsText}>{product.points} points</Text>
           </View>
         </View>
@@ -124,7 +124,7 @@ const ProductDetails = ({
           {/* OpenAI Analysis */}
           <View style={styles.analysisSection}>
             <View style={styles.analysisSectionHeader}>
-              <Ionicons name="bulb" size={20} color="#6366f1" />
+              <Ionicons name="bulb" size={20} color="#00AAA3" />
               <Text style={styles.analysisSectionTitle}>AI Analysis</Text>
             </View>
             <Text style={styles.descriptionText}>{product.description}</Text>
@@ -330,7 +330,7 @@ const ProductDetails = ({
         <View style={styles.actionsContainer}>
           <TouchableOpacity onPress={onContinue} style={styles.primaryButton}>
             <LinearGradient
-              colors={["#6366f1", "#8b5cf6"]}
+              colors={["#00AAA3", "#008782"]}
               style={styles.primaryButtonGradient}
             >
               <Text style={styles.primaryButtonText}>
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   pointsText: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#6366f1",
+    color: "#00AAA3",
     marginLeft: 8,
   },
   descriptionCard: {
@@ -686,7 +686,6 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 20,
   },
-  // Enhanced Description Styles
   analysisSection: {
     marginBottom: 20,
     paddingBottom: 20,
@@ -742,10 +741,10 @@ const styles = StyleSheet.create({
   notesContainer: {
     marginBottom: 16,
     padding: 12,
-    backgroundColor: "#fef7ff",
+    backgroundColor: "#E6FAFB",
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: "#8b5cf6",
+    borderLeftColor: "#00AAA3",
   },
   notesText: {
     fontSize: 14,

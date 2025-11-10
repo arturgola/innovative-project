@@ -68,7 +68,11 @@ const SuccessScreen = ({ onContinue }: SuccessScreenProps) => {
     <View style={styles.container}>
       {/* Background effects */}
       <LinearGradient
-        colors={["rgba(16, 185, 129, 0.1)", "rgba(168, 85, 247, 0.05)", "rgba(16, 185, 129, 0.15)"]}
+        colors={[
+          "rgba(0,170,163,0.10)",
+          "rgba(100,195,205,0.05)",
+          "rgba(0,135,130,0.15)",
+        ]}
         style={styles.backgroundGradient}
       />
 
@@ -84,7 +88,7 @@ const SuccessScreen = ({ onContinue }: SuccessScreenProps) => {
         {/* Success icon */}
         <View style={styles.iconContainer}>
           <LinearGradient
-            colors={["#10b981", "rgba(16, 185, 129, 0.8)"]}
+            colors={["#00AAA3", "rgba(0,170,163,0.8)"]}
             style={styles.successIcon}
           >
             <Ionicons name="checkmark-circle" size={64} color="#ffffff" />
@@ -92,10 +96,10 @@ const SuccessScreen = ({ onContinue }: SuccessScreenProps) => {
 
           {/* Sparkle effects */}
           <View style={styles.sparkle1}>
-            <Ionicons name="sparkles" size={32} color="#a855f7" />
+            <Ionicons name="sparkles" size={32} color="#64C3CD" />
           </View>
           <View style={styles.sparkle2}>
-            <Ionicons name="sparkles" size={24} color="#10b981" />
+            <Ionicons name="sparkles" size={24} color="#00AAA3" />
           </View>
         </View>
 
@@ -111,7 +115,7 @@ const SuccessScreen = ({ onContinue }: SuccessScreenProps) => {
         <View style={styles.statsCard}>
           <View style={styles.statsContent}>
             <View style={styles.statusIcon}>
-              <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+              <Ionicons name="checkmark-circle" size={20} color="#00AAA3" />
             </View>
             <View style={styles.statusText}>
               <Text style={styles.statusLabel}>Status</Text>
@@ -124,7 +128,7 @@ const SuccessScreen = ({ onContinue }: SuccessScreenProps) => {
         <View style={styles.buttonsContainer}>
           <TouchableOpacity onPress={onContinue} style={styles.primaryButton}>
             <LinearGradient
-              colors={["#6366f1", "#8b5cf6"]}
+              colors={["#00AAA3", "#008782"]}
               style={styles.primaryButtonGradient}
             >
               <Text style={styles.primaryButtonText}>Continue Scanning</Text>
@@ -238,7 +242,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(248, 250, 252, 0.5)",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.2)",
+    borderColor: "rgba(0,170,163,0.2)",
     padding: 24,
     marginBottom: 48,
     minWidth: 280,
@@ -252,7 +256,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(16, 185, 129, 0.2)",
+    backgroundColor: "rgba(0,170,163,0.2)",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -267,7 +271,7 @@ const styles = StyleSheet.create({
   statusValue: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#10b981",
+    color: "#00AAA3",
   },
   buttonsContainer: {
     width: "100%",
@@ -309,7 +313,7 @@ const styles = StyleSheet.create({
     left: 32,
     width: 12,
     height: 12,
-    backgroundColor: "rgba(16, 185, 129, 0.4)",
+    backgroundColor: "rgba(0,170,163,0.4)",
     borderRadius: 6,
   },
   decorativeElement2: {
@@ -318,7 +322,7 @@ const styles = StyleSheet.create({
     right: 48,
     width: 8,
     height: 8,
-    backgroundColor: "rgba(168, 85, 247, 0.6)",
+    backgroundColor: "rgba(100,195,205,0.6)",
     borderRadius: 4,
   },
   decorativeElement3: {
@@ -327,7 +331,7 @@ const styles = StyleSheet.create({
     left: 48,
     width: 16,
     height: 16,
-    backgroundColor: "rgba(16, 185, 129, 0.3)",
+    backgroundColor: "rgba(0,170,163,0.3)",
     borderRadius: 8,
   },
 });

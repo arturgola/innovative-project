@@ -38,7 +38,7 @@ const CreateUserScreen = ({
   };
 
   return (
-    <LinearGradient colors={["#4F46E5", "#7C3AED"]} style={styles.container}>
+    <LinearGradient colors={["#00AAA3", "#008782"]} style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
           <Ionicons name="person-add" size={80} color="white" />
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     color: "#1F2937",
   },
   createButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "#00AAA3",
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: "row",

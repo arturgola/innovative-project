@@ -60,7 +60,7 @@ const GreetingScreen = ({ onContinue }: GreetingScreenProps) => {
             <Ionicons name="scan" size={48} color="#ffffff" />
           </View>
           <View style={styles.sparkle}>
-            <Ionicons name="sparkles" size={24} color="#6366f1" />
+            <Ionicons name="sparkles" size={24} color="#64C3CD" />
           </View>
         </View>
 
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(99, 102, 241, 0.1)",
+    backgroundColor: "rgba(0,170,163,0.1)",
   },
   content: {
     alignItems: "center",
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 24,
-    backgroundColor: "#6366f1",
+    backgroundColor: "#00AAA3",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "#6366f1",
+    color: "#00AAA3",
     textAlign: "center",
     marginTop: 4,
   },
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     maxWidth: 300,
   },
   continueButton: {
-    backgroundColor: "#6366f1",
+    backgroundColor: "#00AAA3",
     paddingVertical: 16,
     paddingHorizontal: 48,
     borderRadius: 12,
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     left: 16,
     width: 8,
     height: 8,
-    backgroundColor: "#6366f1",
+    backgroundColor: "#64C3CD",
     borderRadius: 4,
     opacity: 0.6,
   },
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     right: 24,
     width: 12,
     height: 12,
-    backgroundColor: "#6366f1",
+    backgroundColor: "#008782",
     borderRadius: 6,
     opacity: 0.4,
   },

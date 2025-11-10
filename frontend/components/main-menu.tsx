@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
+import { Colors } from "@/constants/theme";
 
 interface UserProfile {
   name: string;
@@ -44,19 +46,27 @@ const MainMenu = ({
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header with user info */}
+      {/* Header with logo + user */}
       <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.appTitle}>ScanPro</Text>
-          <Text style={styles.welcomeText}>
-            Welcome back, {userProfile.name}!
-          </Text>
+        <View style={styles.brandWrap}>
+          <Image
+            source={require("@/assets/images/hsy-logo.png")}
+            style={styles.logo}
+            contentFit="contain"
+            accessibilityLabel="HSY"
+          />
+          <View>
+            <Text style={styles.appTitle}>HSY EcoScan</Text>
+            <Text style={styles.welcomeText}>
+              Welcome back, {userProfile?.name ?? ""}!
+            </Text>
+          </View>
         </View>
 
         <TouchableOpacity onPress={onProfile} style={styles.avatarButton}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
-              {userProfile.name.charAt(0).toUpperCase()}
+              {(userProfile?.name?.charAt(0) ?? "").toUpperCase()}
             </Text>
           </View>
         </TouchableOpacity>
@@ -64,26 +74,30 @@ const MainMenu = ({
 
       {/* Points and level display */}
       <LinearGradient
-        colors={["rgba(99, 102, 241, 0.1)", "rgba(168, 85, 247, 0.1)"]}
+        colors={["rgba(0,170,163,0.08)", "rgba(100,195,205,0.10)"]}
         style={styles.pointsCard}
       >
         <View style={styles.pointsContent}>
           <View style={styles.pointsLeft}>
             <LinearGradient
-              colors={["#6366f1", "#a855f7"]}
+              colors={[Colors.light.tint, "#19C2C3"]}
               style={styles.coinsIcon}
             >
-              <Ionicons name="diamond" size={24} color="#ffffff" />
+              <Ionicons name="diamond" size={24} color={Colors.light.buttonText} />
             </LinearGradient>
             <View style={styles.pointsInfo}>
-              <Text style={styles.pointsValue}>{userProfile.totalPoints}</Text>
+              <Text style={styles.pointsValue}>
+                {String(userProfile?.totalPoints ?? 0)}
+              </Text>
               <Text style={styles.pointsLabel}>Total Points</Text>
             </View>
           </View>
           <View style={styles.pointsRight}>
-            <Text style={styles.levelText}>Level {userProfile.level}</Text>
+            <Text style={styles.levelText}>
+              {`Level ${String(userProfile?.level ?? 0)}`}
+            </Text>
             <Text style={styles.scansText}>
-              {userProfile.scansToday} scans today
+              {`${String(userProfile?.scansToday ?? 0)} scans today`}
             </Text>
           </View>
         </View>
@@ -93,10 +107,10 @@ const MainMenu = ({
       <View style={styles.scanButtonContainer}>
         <TouchableOpacity onPress={onScan} style={styles.scanButton}>
           <LinearGradient
-            colors={["#6366f1", "#8b5cf6"]}
+            colors={[Colors.light.tint, "#19C2C3"]}
             style={styles.scanButtonGradient}
           >
-            <Ionicons name="scan" size={64} color="#ffffff" />
+            <Ionicons name="scan" size={64} color={Colors.light.buttonText} />
             <Text style={styles.scanButtonText}>Scan Product</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -106,11 +120,11 @@ const MainMenu = ({
       <View style={styles.statsCard}>
         <View style={styles.statsContent}>
           <View style={styles.statsIcon}>
-            <Ionicons name="bar-chart" size={20} color="#10b981" />
+            <Ionicons name="bar-chart" size={20} color={"#0F766E"} />
           </View>
           <View style={styles.statsInfo}>
             <Text style={styles.statsLabel}>Total Scans</Text>
-            <Text style={styles.statsValue}>{scanCount}</Text>
+            <Text style={styles.statsValue}>{String(scanCount ?? 0)}</Text>
           </View>
         </View>
       </View>
@@ -118,7 +132,7 @@ const MainMenu = ({
       {/* Menu options */}
       <View style={styles.menuOptions}>
         <TouchableOpacity onPress={onStatistics} style={styles.menuOption}>
-          <Ionicons name="bar-chart" size={20} color="#6366f1" />
+          <Ionicons name="bar-chart" size={20} color={Colors.light.tint} />
           <View style={styles.menuOptionText}>
             <Text style={styles.menuOptionTitle}>Scan History</Text>
             <Text style={styles.menuOptionSubtitle}>
@@ -129,7 +143,7 @@ const MainMenu = ({
         </TouchableOpacity>
 
         <TouchableOpacity onPress={onProfile} style={styles.menuOption}>
-          <Ionicons name="person" size={20} color="#6366f1" />
+          <Ionicons name="person" size={20} color={Colors.light.tint} />
           <View style={styles.menuOptionText}>
             <Text style={styles.menuOptionTitle}>Profile</Text>
             <Text style={styles.menuOptionSubtitle}>
@@ -140,7 +154,7 @@ const MainMenu = ({
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleExternalLink} style={styles.menuOption}>
-          <Ionicons name="time" size={20} color="#6366f1" />
+          <Ionicons name="open" size={20} color={Colors.light.tint} />
           <View style={styles.menuOptionText}>
             <Text style={styles.menuOptionTitle}>Go to Jäteopas</Text>
             <Text style={styles.menuOptionSubtitle}>Waste guide website</Text>
@@ -153,53 +167,40 @@ const MainMenu = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-  },
+  container: { flex: 1, backgroundColor: Colors.light.background },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 60,
-    paddingBottom: 24,
+    paddingBottom: 16,
   },
-  headerText: {
-    flex: 1,
-  },
-  appTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1f2937",
-  },
-  welcomeText: {
-    fontSize: 16,
-    color: "#6b7280",
-    marginTop: 4,
-  },
-  avatarButton: {
-    padding: 4,
-  },
+  brandWrap: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  logo: { width: 40, height: 40 },
+  appTitle: { fontSize: 22, fontWeight: "800", color: Colors.light.tint },
+  welcomeText: { fontSize: 14, color: Colors.light.icon, marginTop: 2 },
+
+  avatarButton: { padding: 4 },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(99, 102, 241, 0.1)",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.light.chipBg,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.light.border,
   },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6366f1",
-  },
+  avatarText: { fontSize: 14, fontWeight: "700", color: Colors.light.tint },
+
   pointsCard: {
     marginHorizontal: 24,
-    marginBottom: 32,
+    marginBottom: 28,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(99, 102, 241, 0.2)",
+    borderColor: Colors.light.border,
   },
   pointsContent: {
     flexDirection: "row",
@@ -207,10 +208,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
   },
-  pointsLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  pointsLeft: { flexDirection: "row", alignItems: "center" },
   coinsIcon: {
     width: 48,
     height: 48,
@@ -219,131 +217,76 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  pointsInfo: {
-    alignItems: "flex-start",
-  },
-  pointsValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1f2937",
-  },
-  pointsLabel: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  pointsRight: {
-    alignItems: "flex-end",
-  },
-  levelText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#6366f1",
-  },
-  scansText: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginTop: 2,
-  },
-  scanButtonContainer: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  scanButton: {
-    width: 192,
-    height: 192,
-    borderRadius: 96,
-  },
+  pointsInfo: { alignItems: "flex-start" },
+  pointsValue: { fontSize: 24, fontWeight: "bold", color: Colors.light.text },
+  pointsLabel: { fontSize: 13, color: Colors.light.icon },
+
+  pointsRight: { alignItems: "flex-end" },
+  levelText: { fontSize: 16, fontWeight: "700", color: Colors.light.tint },
+  scansText: { fontSize: 12, color: Colors.light.icon, marginTop: 2 },
+
+  scanButtonContainer: { alignItems: "center", marginBottom: 28 },
+  scanButton: { width: 192, height: 192, borderRadius: 96 },
   scanButtonGradient: {
     flex: 1,
     borderRadius: 96,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
     elevation: 8,
   },
   scanButtonText: {
-    color: "#ffffff",
+    color: Colors.light.buttonText,
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
     marginTop: 8,
   },
+
   statsCard: {
-    backgroundColor: "rgba(248, 250, 252, 0.5)",
+    backgroundColor: Colors.light.card,
     marginHorizontal: 24,
-    marginBottom: 32,
+    marginBottom: 28,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: Colors.light.border,
   },
-  statsContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-  },
+  statsContent: { flexDirection: "row", alignItems: "center", padding: 16 },
   statsIcon: {
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: "rgba(16, 185, 129, 0.2)",
+    backgroundColor: "rgba(0,170,163,0.18)",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
-  statsInfo: {
-    flex: 1,
-  },
-  statsLabel: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  statsValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1f2937",
-  },
-  menuOptions: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
+  statsInfo: { flex: 1 },
+  statsLabel: { fontSize: 14, color: Colors.light.icon },
+  statsValue: { fontSize: 22, fontWeight: "800", color: Colors.light.text },
+
+  menuOptions: { paddingHorizontal: 24, paddingBottom: 40 },
   menuOption: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: Colors.light.background,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: Colors.light.border,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
     shadowRadius: 2,
     elevation: 2,
   },
-  menuOptionText: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  menuOptionTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#1f2937",
-  },
-  menuOptionSubtitle: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginTop: 2,
-  },
+  menuOptionText: { flex: 1, marginLeft: 12 },
+  menuOptionTitle: { fontSize: 16, fontWeight: "600", color: Colors.light.text },
+  menuOptionSubtitle: { fontSize: 13, color: Colors.light.icon, marginTop: 2 },
 });
 
 export default MainMenu;

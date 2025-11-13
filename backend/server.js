@@ -50,6 +50,11 @@ const HSY_WASTE_API_URL =
 const HSY_CLIENT_ID = process.env.HSY_CLIENT_ID;
 const HSY_CLIENT_SECRET = process.env.HSY_CLIENT_SECRET;
 
+// HSY Waste Guide Cache
+let hsyWasteGuideCache = null;
+let hsyCacheTimestamp = null;
+const HSY_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
 // Database setup
 const db = new sqlite3.Database("./data.db");
 db.run("CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, name TEXT)");
@@ -78,7 +83,6 @@ db.run(`CREATE TABLE IF NOT EXISTS product_scans (
   rating REAL DEFAULT 0,
   description TEXT,
   recyclability TEXT,
-  eco_score REAL DEFAULT 0,
   suggestions TEXT, -- JSON string array
   confidence REAL DEFAULT 0,
   analysis_method TEXT DEFAULT 'openai-vision',
@@ -110,6 +114,27 @@ async function convertImageToBase64(imagePath) {
   }
 }
 
+// Helper function to clean OpenAI response and extract JSON
+function cleanOpenAIResponse(content) {
+  try {
+    // Remove markdown code blocks if present
+    let cleanContent = content.trim();
+
+    // Remove ```json and ``` markers
+    cleanContent = cleanContent.replace(/^```json\s*/, "");
+    cleanContent = cleanContent.replace(/^```\s*/, "");
+    cleanContent = cleanContent.replace(/\s*```$/, "");
+
+    // Trim any extra whitespace
+    cleanContent = cleanContent.trim();
+
+    return cleanContent;
+  } catch (error) {
+    console.error("Error cleaning OpenAI response:", error);
+    return content;
+  }
+}
+
 // HSY API authentication helper
 function getHSYHeaders() {
   if (!HSY_CLIENT_ID || !HSY_CLIENT_SECRET) {
@@ -125,147 +150,181 @@ function getHSYHeaders() {
   };
 }
 
-// Function to fetch HSY waste guide data and find matches
-async function findWasteGuideMatch(aiResponse) {
+// Function to fetch HSY waste guide list and cache it
+async function getHSYWasteGuideList() {
   try {
-    console.log("Fetching HSY waste guide data...");
+    // Check if cache is still valid
+    const now = Date.now();
+    if (
+      hsyWasteGuideCache &&
+      hsyCacheTimestamp &&
+      now - hsyCacheTimestamp < HSY_CACHE_DURATION
+    ) {
+      console.log("Using cached HSY waste guide data");
+      return hsyWasteGuideCache;
+    }
+
+    console.log("Fetching fresh HSY waste guide data...");
 
     // Get HSY authentication headers
     const headers = getHSYHeaders();
 
+    // First try with original URL to see base response
+    console.log("Fetching with original URL:", HSY_WASTE_API_URL);
+
     const response = await axios.get(HSY_WASTE_API_URL, {
-      timeout: 10000, // 10 second timeout
+      timeout: 15000, // 15 second timeout
       headers: headers,
     });
 
     const responseData = response.data;
+    console.log("HSY API response structure:", Object.keys(responseData));
+    console.log(
+      "Total count from API:",
+      responseData.total || responseData.totalCount || "unknown"
+    );
 
-    // HSY API returns data in a 'hits' array
-    const wasteItems = responseData.hits || responseData;
-    console.log(`Found ${wasteItems.length} waste guide items`);
+    let allWasteItems = responseData.hits || responseData;
+    console.log(`Got ${allWasteItems.length} items from first request`);
 
-    if (!Array.isArray(wasteItems)) {
-      console.warn("HSY API response hits is not an array:", typeof wasteItems);
-      console.log("Full response structure:", Object.keys(responseData));
-      return null;
-    }
-
-    // Extract the product name from AI response for matching
-    const aiProductName = aiResponse.name || "";
-    const aiObjectMaterial = aiResponse.objectMaterial || "";
-    const aiCategory = aiResponse.category || "";
-
-    console.log("Looking for matches with:", {
-      aiProductName,
-      aiObjectMaterial,
-      aiCategory,
-    });
-
-    // Find matches by checking titles and synonyms
-    const matches = [];
-
-    for (const item of wasteItems) {
-      if (!item.title) continue;
-
-      const itemTitle = item.title.toLowerCase();
-      const synonyms = (item.synonyms || []).map((s) => s.toLowerCase());
-      const productName = aiProductName.toLowerCase();
-      const objectMaterial = aiObjectMaterial.toLowerCase();
-      const category = aiCategory.toLowerCase();
-
-      // Calculate match score based on different criteria
-      let matchScore = 0;
-
-      // Direct title matches (highest priority)
-      if (itemTitle.includes(productName) && productName.length > 2) {
-        matchScore += 4;
-      }
-
-      // Synonym matches (high priority)
-      for (const synonym of synonyms) {
-        if (synonym.includes(productName) || productName.includes(synonym)) {
-          matchScore += 3;
-        }
-      }
-
-      // Material-based matches
-      const materialKeywords = objectMaterial.split(" ");
-      for (const keyword of materialKeywords) {
-        if (keyword.length > 2) {
-          if (itemTitle.includes(keyword)) {
-            matchScore += 2;
-          }
-          // Check synonyms for material matches
-          for (const synonym of synonyms) {
-            if (synonym.includes(keyword)) {
-              matchScore += 2;
-            }
-          }
-        }
-      }
-
-      // Category-based matches
-      if (category && category.length > 2) {
-        if (itemTitle.includes(category)) {
-          matchScore += 1;
-        }
-        for (const synonym of synonyms) {
-          if (synonym.includes(category)) {
-            matchScore += 1;
-          }
-        }
-      }
-
-      // Word-by-word matching for better accuracy
-      const titleWords = itemTitle.split(/\s+/);
-      const productWords = productName.split(/\s+/);
-
-      for (const productWord of productWords) {
-        if (productWord.length > 2) {
-          for (const titleWord of titleWords) {
-            if (
-              titleWord.includes(productWord) ||
-              productWord.includes(titleWord)
-            ) {
-              matchScore += 1;
-            }
-          }
-          // Also check synonyms
-          for (const synonym of synonyms) {
-            const synonymWords = synonym.split(/\s+/);
-            for (const synonymWord of synonymWords) {
-              if (
-                synonymWord.includes(productWord) ||
-                productWord.includes(synonymWord)
-              ) {
-                matchScore += 1;
-              }
-            }
-          }
-        }
-      }
-
-      if (matchScore > 0) {
-        matches.push({
-          ...item,
-          matchScore: matchScore,
-        });
-      }
-    }
-
-    // Sort matches by score (highest first) and return the best match
-    matches.sort((a, b) => b.matchScore - a.matchScore);
-
-    if (matches.length > 0) {
-      const bestMatch = matches[0];
-      console.log(
-        `Found best match: "${bestMatch.title}" with score ${bestMatch.matchScore}`
+    if (!Array.isArray(allWasteItems)) {
+      console.warn(
+        "HSY API response hits is not an array:",
+        typeof allWasteItems
       );
-      return bestMatch;
+      console.log("Full response data:", responseData);
+      return [];
     }
 
-    console.log("No matches found in HSY waste guide");
-    return null;
+    // Check if there are more pages available
+    const totalCount = responseData.total || responseData.totalCount;
+    if (totalCount && totalCount > allWasteItems.length) {
+      console.log(
+        `API indicates ${totalCount} total items, but we only got ${allWasteItems.length}. Fetching all items...`
+      );
+
+      // Calculate how many requests we need (20 items per request)
+      const itemsPerPage = allWasteItems.length; // Should be 20
+      const totalPages = Math.ceil(totalCount / itemsPerPage);
+      console.log(
+        `Need to fetch ${totalPages} pages to get all ${totalCount} items`
+      );
+
+      // Try different pagination parameter formats
+      const paginationFormats = [
+        (page) => `${HSY_WASTE_API_URL}&page=${page}`,
+        (page) => `${HSY_WASTE_API_URL}&offset=${page * itemsPerPage}`,
+        (page) => `${HSY_WASTE_API_URL}&from=${page * itemsPerPage}`,
+        (page) => `${HSY_WASTE_API_URL}&skip=${page * itemsPerPage}`,
+        (page) => `${HSY_WASTE_API_URL}&start=${page * itemsPerPage}`,
+      ];
+
+      let successfulFormat = null;
+
+      // Test each pagination format with the second page
+      for (const formatFunc of paginationFormats) {
+        try {
+          const testUrl = formatFunc(1); // Try second page (page 1, or offset 20)
+          console.log(`Testing pagination format: ${testUrl}`);
+
+          const testResponse = await axios.get(testUrl, {
+            timeout: 10000,
+            headers: headers,
+          });
+
+          const testData = testResponse.data;
+          const testItems = testData.hits || testData;
+
+          if (Array.isArray(testItems) && testItems.length > 0) {
+            console.log(
+              `✅ Found working pagination format! Got ${testItems.length} items`
+            );
+            successfulFormat = formatFunc;
+            allWasteItems = [...allWasteItems, ...testItems];
+            break;
+          }
+        } catch (testError) {
+          console.log(
+            `❌ Format failed: ${
+              testError.response?.status || testError.message
+            }`
+          );
+        }
+      }
+
+      // If we found a working format, fetch the remaining pages
+      if (successfulFormat) {
+        console.log(`Fetching remaining pages using successful format...`);
+
+        for (let page = 2; page < Math.min(totalPages, 35); page++) {
+          // Limit to 35 pages max for safety
+          try {
+            const pageUrl = successfulFormat(page);
+            console.log(
+              `Fetching page ${page + 1}/${Math.min(
+                totalPages,
+                35
+              )}: ${pageUrl}`
+            );
+
+            const pageResponse = await axios.get(pageUrl, {
+              timeout: 10000,
+              headers: headers,
+            });
+
+            const pageData = pageResponse.data;
+            const pageItems = pageData.hits || pageData;
+
+            if (Array.isArray(pageItems) && pageItems.length > 0) {
+              allWasteItems = [...allWasteItems, ...pageItems];
+              console.log(
+                `  ✅ Got ${pageItems.length} more items (total: ${allWasteItems.length})`
+              );
+            } else {
+              console.log(`  ⚠️ No more items found, stopping pagination`);
+              break;
+            }
+
+            // Add small delay to be respectful to the API
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          } catch (pageError) {
+            console.error(
+              `  ❌ Error fetching page ${page}: ${
+                pageError.response?.status || pageError.message
+              }`
+            );
+            // Continue with other pages even if one fails
+          }
+        }
+
+        console.log(
+          `✅ Pagination complete! Fetched ${allWasteItems.length} total items`
+        );
+      } else {
+        console.log(
+          `❌ No working pagination format found. Using ${allWasteItems.length} items from first request only.`
+        );
+      }
+    }
+
+    // Extract only id, title, and synonyms for the cache
+    const simplifiedItems = allWasteItems
+      .map((item) => ({
+        id: item.id,
+        title: item.title || "",
+        synonyms: item.synonyms || [],
+      }))
+      .filter((item) => item.title && item.id); // Only include items with title and id
+
+    console.log(
+      `Cached ${simplifiedItems.length} HSY waste guide items (${allWasteItems.length} total before filtering)`
+    );
+
+    // Update cache
+    hsyWasteGuideCache = simplifiedItems;
+    hsyCacheTimestamp = now;
+
+    return simplifiedItems;
   } catch (error) {
     console.error("Error fetching HSY waste guide data:", error.message);
 
@@ -274,12 +333,44 @@ async function findWasteGuideMatch(aiResponse) {
       console.error("HSY API Response Data:", error.response.data);
     }
 
-    if (error.response && error.response.status === 401) {
-      console.error("HSY API authentication failed - check your API key");
-    } else if (error.response && error.response.status === 403) {
-      console.error(
-        "HSY API access forbidden - check your API key permissions"
-      );
+    // Return cached data if available, even if stale
+    if (hsyWasteGuideCache) {
+      console.log("Using stale cached HSY data due to API error");
+      return hsyWasteGuideCache;
+    }
+
+    return [];
+  }
+}
+
+// Function to fetch detailed waste guide item by ID
+async function getHSYWasteGuideDetails(wasteGuideId) {
+  try {
+    console.log(`Fetching HSY waste guide details for ID: ${wasteGuideId}`);
+
+    // Get HSY authentication headers
+    const headers = getHSYHeaders();
+
+    const detailUrl = `https://dev.klapi.hsy.fi/int2001/v1/waste-guide-api/waste-pages/${wasteGuideId}?lang=en`;
+
+    const response = await axios.get(detailUrl, {
+      timeout: 10000, // 10 second timeout
+      headers: headers,
+    });
+
+    console.log(
+      `✅ Successfully fetched details for HSY item: "${response.data.title}"`
+    );
+    return response.data;
+  } catch (error) {
+    console.error(
+      `Error fetching HSY waste guide details for ID ${wasteGuideId}:`,
+      error.message
+    );
+
+    if (error.response) {
+      console.error("HSY API Response Status:", error.response.status);
+      console.error("HSY API Response Data:", error.response.data);
     }
 
     return null;
@@ -335,11 +426,12 @@ async function analyzeObjectMaterial(imagePath) {
   }
 }
 
-async function analyzeProductImage(imagePath) {
+async function analyzeProductImage(imagePath, hsyWasteGuideList) {
   try {
     const base64Image = await convertImageToBase64(imagePath);
 
-    const response = await axios.post(
+    // Step 1: First analyze the image to get product description
+    const analysisResponse = await axios.post(
       OPENAI_API_URL,
       {
         model: "gpt-4o-mini",
@@ -349,23 +441,27 @@ async function analyzeProductImage(imagePath) {
             content: [
               {
                 type: "text",
-                text: `First, analyze the object in this image and identify its material. Then provide comprehensive analysis.
+                text: `Analyze this image focusing on PACKAGING and WASTE DISPOSAL. What materials need to be disposed of? Return ONLY valid JSON without any markdown formatting or code blocks:
 
-STEP 1: Analyze object and its material, return only string with object short descriptions, such as type and material (e.g., "plastic bottle", "metal can", "glass jar").
+{
+  "name": "Package/Container type (e.g., 'Plastic bag', 'Glass bottle', 'Metal can')",
+  "brand": "Brand name if visible", 
+  "category": "Packaging category (e.g., 'Food packaging', 'Beverage container', 'Cosmetic container')",
+  "recyclability": "Type of recyclability based on packaging material",
+  "description": "Description of the PACKAGING material and type, not the contents",
+  "suggestions": ["Array of disposal and recycling suggestions for the packaging"],
+  "confidence": "Confidence level from 0-100",
+  "keywords": ["Focus on packaging materials like 'plastic', 'bag', 'bottle', 'metal', 'glass', 'cardboard', 'paper', etc."]
+}
 
-STEP 2: Provide detailed analysis in JSON format:
-                  {
-                    "name": "Product name",
-                    "brand": "Brand name", 
-                    "category": "Product category",
-                    "recyclability": "Type of recyclability (e.g., fully recyclable, partially recyclable, not recyclable)",
-                    "ecoScore": "Environmental score from 1-100",
-                    "description": "Brief product description including the object type and material from step 1",
-                    "suggestions": ["Array of eco-friendly suggestions"],
-                    "confidence": "Confidence level from 0-100"
-                  }
-                  
-                  Focus on sustainability and environmental impact. Include the object type and material analysis in the description field. If you can't identify the product clearly, provide general information and mark confidence as low.`,
+CRITICAL: Focus on the PACKAGING/CONTAINER that needs disposal, NOT the product contents. For example:
+- If it's food in a plastic bag → analyze the plastic bag
+- If it's drink in a glass bottle → analyze the glass bottle  
+- If it's cosmetics in a metal tube → analyze the metal tube
+
+Include material types (plastic, metal, glass, paper, cardboard) and packaging forms (bag, bottle, can, box, tube) in your keywords.
+
+IMPORTANT: Return only the JSON object, no markdown formatting, no code blocks, no explanatory text.`,
               },
               {
                 type: "image_url",
@@ -388,20 +484,22 @@ STEP 2: Provide detailed analysis in JSON format:
       }
     );
 
-    const content = response.data.choices[0].message.content;
+    const analysisContent = analysisResponse.data.choices[0].message.content;
+    let analysisResult;
 
-    // Parse the JSON response
     try {
-      const analysisResult = JSON.parse(content);
-      return analysisResult;
+      // Clean the response to remove markdown code blocks
+      const cleanedContent = cleanOpenAIResponse(analysisContent);
+      console.log("Cleaned OpenAI response:", cleanedContent);
+      analysisResult = JSON.parse(cleanedContent);
     } catch (parseError) {
-      // Fallback if JSON parsing fails
+      console.error("Error parsing OpenAI analysis response:", parseError);
+      console.error("Raw OpenAI response:", analysisContent);
       return {
         name: "Unknown Product",
         brand: "Unknown Brand",
         category: "General Item",
         recyclability: "Check local guidelines",
-        ecoScore: 50,
         description:
           "Product analysis incomplete. Please try again with a clearer image.",
         suggestions: [
@@ -409,8 +507,97 @@ STEP 2: Provide detailed analysis in JSON format:
           "Consider eco-friendly alternatives",
         ],
         confidence: 30,
+        keywords: [],
+        hsyMatchId: null,
       };
     }
+
+    // Step 2: Compare product description with HSY waste guide items
+    const productKeywords = (analysisResult.keywords || []).join(", ");
+    const productDescription = `${analysisResult.name}, ${analysisResult.category}, ${analysisResult.description}, ${productKeywords}`;
+
+    // Format HSY waste guide list for comparison
+    const hsyListFormatted = hsyWasteGuideList
+      .slice(0, 150)
+      .map(
+        (item) =>
+          `ID: ${item.id}, Title: "${item.title}"${
+            item.synonyms.length > 0
+              ? `, Synonyms: [${item.synonyms.join(", ")}]`
+              : ""
+          }`
+      )
+      .join("\n");
+
+    const matchingResponse = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Find the best HSY waste guide match for this PACKAGING/CONTAINER:
+
+PACKAGING TO MATCH: "${productDescription}"
+
+HSY Waste Guide Items (Finnish waste management):
+${hsyListFormatted}
+
+Focus on PACKAGING MATERIALS and DISPOSAL. Match based on:
+1. MATERIAL TYPE: plastic, metal, glass, paper, cardboard
+2. PACKAGING FORM: bag, bottle, can, container, box, tube, wrapper
+3. FOOD/NON-FOOD packaging categories
+4. Synonyms for packaging materials
+
+EXAMPLES:
+- "plastic bag" → look for plastic packaging, bags, food packaging
+- "glass bottle" → look for glass containers, bottles
+- "metal can" → look for metal containers, cans, aluminum
+- "cardboard box" → look for cardboard, paper packaging
+
+PRIORITIZE: Material type matches over content type. A plastic bag for marshmallows should match plastic packaging items, not candy/food items.
+
+Return ONLY the ID number of the best matching HSY item, or "null" if no good match exists.
+Response format: Just the ID number (e.g., "123") or "null"`,
+              },
+            ],
+          },
+        ],
+        max_tokens: 50,
+        temperature: 0.1,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+      }
+    );
+
+    const matchContent =
+      matchingResponse.data.choices[0].message.content.trim();
+    let hsyMatchId = null;
+
+    // Parse the matching result
+    if (matchContent && matchContent !== "null" && matchContent !== "NULL") {
+      const parsedId = parseInt(matchContent.replace(/['"]/g, ""));
+      if (!isNaN(parsedId)) {
+        hsyMatchId = parsedId;
+      }
+    }
+
+    console.log(`Product: "${productDescription}"`);
+    console.log(`Available HSY items count: ${hsyWasteGuideList.length}`);
+    console.log(`Sample HSY items:`, hsyWasteGuideList.slice(0, 3));
+    console.log(`HSY Match ID selected by AI: ${hsyMatchId}`);
+
+    // Add the HSY match ID to the analysis result
+    analysisResult.hsyMatchId = hsyMatchId;
+
+    return analysisResult;
   } catch (error) {
     console.error("Error analyzing image with OpenAI:", error);
     throw error;
@@ -446,49 +633,68 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
 
     console.log("Analyzing product image for user:", userId);
 
-    // First, get object and material analysis
+    // Step 1: Get HSY waste guide list
+    console.log("Fetching HSY waste guide list...");
+    const hsyWasteGuideList = await getHSYWasteGuideList();
+
+    // Step 2: Get object and material analysis
     const objectMaterialResult = await analyzeObjectMaterial(imagePath);
 
-    // Then analyze the image with full OpenAI analysis
-    const analysisResult = await analyzeProductImage(imagePath);
+    // Step 3: Analyze the image with HSY list included in prompt
+    console.log("Analyzing image with OpenAI and HSY waste guide...");
+    const analysisResult = await analyzeProductImage(
+      imagePath,
+      hsyWasteGuideList
+    );
 
-    // Add object material to analysis result for waste guide matching
+    // Add object material to analysis result
     analysisResult.objectMaterial = objectMaterialResult.shortDescription;
 
-    // Find matching item in HSY waste guide
-    console.log("Searching for matches in HSY waste guide...");
-    const wasteGuideMatch = await findWasteGuideMatch(analysisResult);
+    // Step 4: Fetch detailed HSY waste guide information if match found
+    let wasteGuideDetails = null;
+    if (analysisResult.hsyMatchId) {
+      console.log(`Fetching HSY details for ID: ${analysisResult.hsyMatchId}`);
+      wasteGuideDetails = await getHSYWasteGuideDetails(
+        analysisResult.hsyMatchId
+      );
 
-    if (wasteGuideMatch) {
-      console.log(`✅ Found HSY waste guide match: "${wasteGuideMatch.title}"`);
+      if (wasteGuideDetails) {
+        console.log(
+          `✅ Found HSY waste guide details: "${wasteGuideDetails.title}"`
+        );
+      } else {
+        console.log("❌ Failed to fetch HSY waste guide details");
+      }
     } else {
-      console.log("❌ No HSY waste guide match found");
+      console.log("❌ No HSY waste guide match selected by AI");
     }
 
-    // Calculate points based on eco score
-    const points = Math.floor(analysisResult.ecoScore / 2);
+    // Calculate points based on confidence and recyclability
+    const points =
+      Math.floor((analysisResult.confidence || 50) / 2) +
+      (wasteGuideDetails ? 10 : 0);
 
     // Save scan result to database
     const scannedAt = new Date().toISOString();
-    const suggestionsJson = JSON.stringify(analysisResult.suggestions);
-    const wasteGuideMatchJson = wasteGuideMatch
+    const suggestionsJson = JSON.stringify(analysisResult.suggestions || []);
+    const wasteGuideMatchJson = wasteGuideDetails
       ? JSON.stringify({
-          title: wasteGuideMatch.title,
-          matchScore: wasteGuideMatch.matchScore,
-          id: wasteGuideMatch.id,
-          synonyms: wasteGuideMatch.synonyms || [],
-          notes: wasteGuideMatch.notes || null,
-          wasteTypes: wasteGuideMatch.wasteTypes || [],
-          recyclingMethods: wasteGuideMatch.recyclingMethods || [],
+          id: wasteGuideDetails.id,
+          title: wasteGuideDetails.title,
+          synonyms: wasteGuideDetails.synonyms || [],
+          notes: wasteGuideDetails.notes || null,
+          wasteTypes: wasteGuideDetails.wasteTypes || [],
+          recyclingMethods: wasteGuideDetails.recyclingMethods || [],
+          instructions: wasteGuideDetails.instructions || null,
         })
       : null;
 
     db.run(
       `INSERT INTO product_scans 
        (user_id, name, brand, category, barcode, points, rating, description, 
-        recyclability, eco_score, suggestions, confidence, analysis_method, 
+        recyclability, suggestions, confidence, analysis_method, 
         object_material, waste_guide_match, image_path, photo_width, photo_height, scanned_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId || null,
         analysisResult.name,
@@ -496,13 +702,12 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
         analysisResult.category,
         "camera-scanned",
         points,
-        analysisResult.ecoScore,
+        analysisResult.confidence || 50,
         `${objectMaterialResult.shortDescription} - ${analysisResult.description}`,
         analysisResult.recyclability,
-        analysisResult.ecoScore,
         suggestionsJson,
         analysisResult.confidence,
-        "openai-vision",
+        "openai-vision-with-hsy",
         objectMaterialResult.shortDescription,
         wasteGuideMatchJson,
         imagePath,
@@ -541,27 +746,26 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
           category: analysisResult.category,
           barcode: "camera-scanned",
           points: points,
-          rating: analysisResult.ecoScore,
+          rating: analysisResult.confidence || 50,
           description: `${objectMaterialResult.shortDescription} - ${analysisResult.description}`,
           scannedAt: scannedAt,
           photoUri: `/uploads/${path.basename(imagePath)}`,
           photoWidth: 0,
           photoHeight: 0,
           recyclability: analysisResult.recyclability,
-          ecoScore: analysisResult.ecoScore,
-          suggestions: analysisResult.suggestions,
+          suggestions: analysisResult.suggestions || [],
           confidence: analysisResult.confidence,
-          analysisMethod: "openai-vision",
+          analysisMethod: "openai-vision-with-hsy",
           objectMaterial: objectMaterialResult.shortDescription,
-          wasteGuideMatch: wasteGuideMatch
+          wasteGuideMatch: wasteGuideDetails
             ? {
-                title: wasteGuideMatch.title,
-                matchScore: wasteGuideMatch.matchScore,
-                id: wasteGuideMatch.id,
-                synonyms: wasteGuideMatch.synonyms || [],
-                notes: wasteGuideMatch.notes || null,
-                wasteTypes: wasteGuideMatch.wasteTypes || [],
-                recyclingMethods: wasteGuideMatch.recyclingMethods || [],
+                id: wasteGuideDetails.id,
+                title: wasteGuideDetails.title,
+                synonyms: wasteGuideDetails.synonyms || [],
+                notes: wasteGuideDetails.notes || null,
+                wasteTypes: wasteGuideDetails.wasteTypes || [],
+                recyclingMethods: wasteGuideDetails.recyclingMethods || [],
+                instructions: wasteGuideDetails.instructions || null,
               }
             : null,
         };
@@ -618,7 +822,6 @@ app.get("/users/:id/scans", (req, res) => {
         rating: row.rating,
         description: row.description,
         recyclability: row.recyclability,
-        ecoScore: row.eco_score,
         suggestions: JSON.parse(row.suggestions || "[]"),
         confidence: row.confidence,
         analysisMethod: row.analysis_method,
@@ -639,6 +842,73 @@ app.get("/users/:id/scans", (req, res) => {
 
 // Serve uploaded images
 app.use("/uploads", express.static("uploads"));
+
+// Debug endpoint to see cached HSY items
+app.get("/hsy-cache", async (req, res) => {
+  try {
+    const hsyItems = await getHSYWasteGuideList();
+    res.json({
+      success: true,
+      itemCount: hsyItems.length,
+      items: hsyItems,
+      cacheTimestamp: hsyCacheTimestamp,
+      cacheAge: hsyCacheTimestamp ? Date.now() - hsyCacheTimestamp : null,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// Test specific HSY ID endpoint
+app.get("/hsy-test/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const details = await getHSYWasteGuideDetails(id);
+
+    res.json({
+      success: !!details,
+      id: id,
+      details: details,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      id: req.params.id,
+    });
+  }
+});
+
+// Manual search in cached items
+app.get("/hsy-search/:term", async (req, res) => {
+  try {
+    const searchTerm = req.params.term.toLowerCase();
+    const hsyItems = await getHSYWasteGuideList();
+
+    const matches = hsyItems.filter((item) => {
+      const titleMatch = item.title.toLowerCase().includes(searchTerm);
+      const synonymMatch = item.synonyms.some((synonym) =>
+        synonym.toLowerCase().includes(searchTerm)
+      );
+      return titleMatch || synonymMatch;
+    });
+
+    res.json({
+      success: true,
+      searchTerm: req.params.term,
+      matchCount: matches.length,
+      matches: matches.slice(0, 10), // Return first 10 matches
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
 
 // HSY Waste Guide API endpoint for testing
 app.get("/waste-guide", async (req, res) => {
@@ -678,19 +948,74 @@ app.post("/waste-guide/search", async (req, res) => {
       return res.status(400).json({ error: "Search term is required" });
     }
 
-    // Create a mock analysis result to test the matching
-    const mockAnalysisResult = {
-      name: searchTerm,
-      objectMaterial: searchTerm,
-      category: searchTerm,
-    };
+    // Get HSY waste guide list
+    const hsyWasteGuideList = await getHSYWasteGuideList();
 
-    const match = await findWasteGuideMatch(mockAnalysisResult);
+    // Format HSY waste guide list for comparison
+    const hsyListFormatted = hsyWasteGuideList
+      .slice(0, 100)
+      .map(
+        (item) =>
+          `ID: ${item.id}, Title: "${item.title}"${
+            item.synonyms.length > 0
+              ? `, Synonyms: [${item.synonyms.join(", ")}]`
+              : ""
+          }`
+      )
+      .join("\n");
+
+    // Use OpenAI to find the best match
+    const response = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Find the best match for this search term in the HSY waste guide:
+
+SEARCH TERM: "${searchTerm}"
+
+HSY Waste Guide Items:
+${hsyListFormatted}
+
+Compare the search term with titles and synonyms. Return the ID of the best match or "null" if no good match exists.
+Response format: Just the ID number (e.g., "123") or "null"`,
+              },
+            ],
+          },
+        ],
+        max_tokens: 50,
+        temperature: 0.1,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+      }
+    );
+
+    const matchContent = response.data.choices[0].message.content.trim();
+    let matchId = null;
+    let matchDetails = null;
+
+    if (matchContent && matchContent !== "null" && matchContent !== "NULL") {
+      const parsedId = parseInt(matchContent.replace(/['"]/g, ""));
+      if (!isNaN(parsedId)) {
+        matchId = parsedId;
+        matchDetails = await getHSYWasteGuideDetails(parsedId);
+      }
+    }
 
     res.json({
       success: true,
       searchTerm: searchTerm,
-      match: match,
+      matchId: matchId,
+      match: matchDetails,
     });
   } catch (error) {
     console.error("Error searching waste guide:", error.message);
@@ -851,9 +1176,26 @@ app.delete("/users/:id", (req, res) => {
   });
 });
 
+// Initialize HSY cache on startup
+async function initializeServer() {
+  try {
+    console.log("Initializing HSY waste guide cache...");
+    await getHSYWasteGuideList();
+    console.log("✅ HSY cache initialized successfully");
+  } catch (error) {
+    console.error("❌ Failed to initialize HSY cache:", error.message);
+    console.log(
+      "Server will continue without HSY cache - it will be loaded on first request"
+    );
+  }
+}
+
 // Start server
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, "0.0.0.0", async () => {
   console.log(`Backend running at http://0.0.0.0:${PORT}`);
   console.log(`Local access: http://localhost:${PORT}`);
   console.log(`Network access: http://192.168.1.145:${PORT}`);
+
+  // Initialize HSY cache
+  await initializeServer();
 });

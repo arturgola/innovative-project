@@ -2,7 +2,7 @@ name: CI - Test and Docker Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ '**' ]
   pull_request:
 
 jobs:

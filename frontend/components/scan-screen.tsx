@@ -76,7 +76,7 @@ const ScanScreen = ({
     return (
       <View style={styles.container}>
         <View style={styles.permissionContainer}>
-          <Ionicons name="camera" size={64} color="#6366f1" />
+          <Ionicons name="camera" size={64} color="#00AAA3" />
           <Text style={styles.permissionText}>
             We need your permission to use the camera
           </Text>
@@ -277,7 +277,7 @@ const ScanScreen = ({
                 style={[styles.scanButton, { opacity: isScanning ? 0.7 : 1 }]}
               >
                 <LinearGradient
-                  colors={["#6366f1", "#8b5cf6"]}
+                  colors={["#00AAA3", "#008782"]}
                   style={styles.scanButtonGradient}
                 >
                   <Ionicons
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   permissionButton: {
-    backgroundColor: "#6366f1",
+    backgroundColor: "#00AAA3",
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 20,
     height: 20,
-    borderColor: "#6366f1",
+    borderColor: "#00AAA3",
     borderWidth: 3,
   },
   topLeft: {
@@ -465,8 +465,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: "100%",
     height: 2,
-    backgroundColor: "#6366f1",
-    shadowColor: "#6366f1",
+    backgroundColor: "#00AAA3",
+    shadowColor: "#00AAA3",
     shadowOffset: {
       width: 0,
       height: 0,
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   scanButtonWrapper: {
-    shadowColor: "#6366f1",
+    shadowColor: "#00AAA3",
     shadowOffset: {
       width: 0,
       height: 0,

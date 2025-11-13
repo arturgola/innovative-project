@@ -7,6 +7,7 @@ import {
   ScrollView,
   Share,
   Image,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -44,17 +45,6 @@ const ProductDetails = ({
     }
   };
 
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Ionicons
-        key={i}
-        name={i < Math.floor(rating) ? "star" : "star-outline"}
-        size={16}
-        color={i < rating ? "#fbbf24" : "#d1d5db"}
-      />
-    ));
-  };
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -77,7 +67,7 @@ const ProductDetails = ({
             />
           ) : (
             <LinearGradient
-              colors={["#f8fafc", "#f1f5f9"]}
+              colors={["#E6FAFB", "#D9F0F2"]}
               style={styles.productImageCard}
             >
               <Ionicons name="cube" size={96} color="#9ca3af" />
@@ -105,14 +95,10 @@ const ProductDetails = ({
             <View style={styles.categoryBadge}>
               <Text style={styles.categoryText}>{product.category}</Text>
             </View>
-            <View style={styles.ratingContainer}>
-              {renderStars(product.rating)}
-              <Text style={styles.ratingText}>({product.rating})</Text>
-            </View>
           </View>
 
           <View style={styles.pointsSection}>
-            <Ionicons name="diamond" size={24} color="#6366f1" />
+            <Ionicons name="diamond" size={24} color="#00AAA3" />
             <Text style={styles.pointsText}>{product.points} points</Text>
           </View>
         </View>
@@ -124,25 +110,20 @@ const ProductDetails = ({
           {/* OpenAI Analysis */}
           <View style={styles.analysisSection}>
             <View style={styles.analysisSectionHeader}>
-              <Ionicons name="bulb" size={20} color="#6366f1" />
+              <Ionicons name="bulb" size={20} color="#00AAA3" />
               <Text style={styles.analysisSectionTitle}>AI Analysis</Text>
             </View>
             <Text style={styles.descriptionText}>{product.description}</Text>
           </View>
 
           {/* HSY Waste Guide Match */}
-          {product.wasteGuideMatch && (
+          {product.wasteGuideMatch ? (
             <View style={styles.analysisSection}>
               <View style={styles.analysisSectionHeader}>
                 <Ionicons name="leaf" size={20} color="#10b981" />
                 <Text style={styles.analysisSectionTitle}>
                   Waste Disposal Guide
                 </Text>
-                <View style={styles.matchScoreBadge}>
-                  <Text style={styles.matchScoreText}>
-                    {product.wasteGuideMatch.matchScore}% match
-                  </Text>
-                </View>
               </View>
 
               <Text style={styles.hsyTitle}>
@@ -228,27 +209,38 @@ const ProductDetails = ({
                   </View>
                 )}
             </View>
-          )}
-        </View>
+          ) : (
+            <View style={styles.analysisSection}>
+              <View style={styles.analysisSectionHeader}>
+                <Ionicons name="information-circle" size={20} color="#f59e0b" />
+                <Text style={styles.analysisSectionTitle}>
+                  Waste Disposal Guide
+                </Text>
+              </View>
 
-        {/* Product details */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.detailsTitle}>Product Information</Text>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Barcode</Text>
-            <Text style={styles.detailValue}>{product.barcode}</Text>
-          </View>
-
-          <View style={styles.detailRowLast}>
-            <View style={styles.detailLabelContainer}>
-              <Ionicons name="calendar" size={16} color="#6b7280" />
-              <Text style={styles.detailLabel}>Scanned</Text>
+              <View style={styles.noHSYMatchContainer}>
+                <Text style={styles.noHSYMatchTitle}>
+                  No specific waste guide match found
+                </Text>
+                <Text style={styles.noHSYMatchDescription}>
+                  For detailed waste sorting and recycling instructions specific
+                  to your area, please visit the official HSY waste guide:
+                </Text>
+                <TouchableOpacity
+                  style={styles.hsyLinkButton}
+                  onPress={() => {
+                    Linking.openURL(
+                      "https://www.hsy.fi/jatteet-ja-kierratys/jateopas-ja-lajitteluohjeet/"
+                    );
+                  }}
+                >
+                  <Ionicons name="globe" size={16} color="#00AAA3" />
+                  <Text style={styles.hsyLinkText}>Visit HSY Waste Guide</Text>
+                  <Ionicons name="open" size={16} color="#00AAA3" />
+                </TouchableOpacity>
+              </View>
             </View>
-            <Text style={styles.detailValue}>
-              {formatDate(product.scannedAt)}
-            </Text>
-          </View>
+          )}
         </View>
 
         {/* AI Analysis Information */}
@@ -330,7 +322,7 @@ const ProductDetails = ({
         <View style={styles.actionsContainer}>
           <TouchableOpacity onPress={onContinue} style={styles.primaryButton}>
             <LinearGradient
-              colors={["#6366f1", "#8b5cf6"]}
+              colors={["#00AAA3", "#008782"]}
               style={styles.primaryButtonGradient}
             >
               <Text style={styles.primaryButtonText}>
@@ -427,15 +419,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#374151",
   },
-  ratingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  ratingText: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginLeft: 8,
-  },
+
   pointsSection: {
     flexDirection: "row",
     alignItems: "center",
@@ -443,7 +427,7 @@ const styles = StyleSheet.create({
   pointsText: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#6366f1",
+    color: "#00AAA3",
     marginLeft: 8,
   },
   descriptionCard: {
@@ -473,55 +457,7 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     lineHeight: 20,
   },
-  detailsCard: {
-    margin: 24,
-    padding: 16,
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  detailsTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1f2937",
-    marginBottom: 16,
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(229, 231, 235, 0.5)",
-  },
-  detailRowLast: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  detailLabelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  detailValue: {
-    fontSize: 14,
-    color: "#1f2937",
-    fontFamily: "monospace",
-  },
+
   actionsContainer: {
     padding: 24,
   },
@@ -686,7 +622,6 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 20,
   },
-  // Enhanced Description Styles
   analysisSection: {
     marginBottom: 20,
     paddingBottom: 20,
@@ -705,17 +640,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
   },
-  matchScoreBadge: {
-    backgroundColor: "#10b981",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  matchScoreText: {
-    fontSize: 12,
-    color: "#ffffff",
-    fontWeight: "500",
-  },
+
   hsyTitle: {
     fontSize: 18,
     fontWeight: "600",
@@ -742,10 +667,10 @@ const styles = StyleSheet.create({
   notesContainer: {
     marginBottom: 16,
     padding: 12,
-    backgroundColor: "#fef7ff",
+    backgroundColor: "#E6FAFB",
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: "#8b5cf6",
+    borderLeftColor: "#00AAA3",
   },
   notesText: {
     fontSize: 14,
@@ -816,6 +741,42 @@ const styles = StyleSheet.create({
     color: "#10b981",
     fontWeight: "500",
     fontStyle: "italic",
+  },
+  noHSYMatchContainer: {
+    padding: 16,
+    backgroundColor: "#fff7ed",
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: "#f59e0b",
+  },
+  noHSYMatchTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#92400e",
+    marginBottom: 8,
+  },
+  noHSYMatchDescription: {
+    fontSize: 14,
+    color: "#451a03",
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  hsyLinkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#00AAA3",
+  },
+  hsyLinkText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#00AAA3",
+    marginHorizontal: 8,
   },
 });
 

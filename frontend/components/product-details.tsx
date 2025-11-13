@@ -7,6 +7,7 @@ import {
   ScrollView,
   Share,
   Image,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -116,7 +117,7 @@ const ProductDetails = ({
           </View>
 
           {/* HSY Waste Guide Match */}
-          {product.wasteGuideMatch && (
+          {product.wasteGuideMatch ? (
             <View style={styles.analysisSection}>
               <View style={styles.analysisSectionHeader}>
                 <Ionicons name="leaf" size={20} color="#10b981" />
@@ -207,6 +208,37 @@ const ProductDetails = ({
                       ))}
                   </View>
                 )}
+            </View>
+          ) : (
+            <View style={styles.analysisSection}>
+              <View style={styles.analysisSectionHeader}>
+                <Ionicons name="information-circle" size={20} color="#f59e0b" />
+                <Text style={styles.analysisSectionTitle}>
+                  Waste Disposal Guide
+                </Text>
+              </View>
+
+              <View style={styles.noHSYMatchContainer}>
+                <Text style={styles.noHSYMatchTitle}>
+                  No specific waste guide match found
+                </Text>
+                <Text style={styles.noHSYMatchDescription}>
+                  For detailed waste sorting and recycling instructions specific
+                  to your area, please visit the official HSY waste guide:
+                </Text>
+                <TouchableOpacity
+                  style={styles.hsyLinkButton}
+                  onPress={() => {
+                    Linking.openURL(
+                      "https://www.hsy.fi/jatteet-ja-kierratys/jateopas-ja-lajitteluohjeet/"
+                    );
+                  }}
+                >
+                  <Ionicons name="globe" size={16} color="#00AAA3" />
+                  <Text style={styles.hsyLinkText}>Visit HSY Waste Guide</Text>
+                  <Ionicons name="open" size={16} color="#00AAA3" />
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </View>
@@ -709,6 +741,42 @@ const styles = StyleSheet.create({
     color: "#10b981",
     fontWeight: "500",
     fontStyle: "italic",
+  },
+  noHSYMatchContainer: {
+    padding: 16,
+    backgroundColor: "#fff7ed",
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: "#f59e0b",
+  },
+  noHSYMatchTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#92400e",
+    marginBottom: 8,
+  },
+  noHSYMatchDescription: {
+    fontSize: 14,
+    color: "#451a03",
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  hsyLinkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#00AAA3",
+  },
+  hsyLinkText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#00AAA3",
+    marginHorizontal: 8,
   },
 });
 

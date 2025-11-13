@@ -44,17 +44,6 @@ const ProductDetails = ({
     }
   };
 
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Ionicons
-        key={i}
-        name={i < Math.floor(rating) ? "star" : "star-outline"}
-        size={16}
-        color={i < rating ? "#fbbf24" : "#d1d5db"}
-      />
-    ));
-  };
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -105,10 +94,6 @@ const ProductDetails = ({
             <View style={styles.categoryBadge}>
               <Text style={styles.categoryText}>{product.category}</Text>
             </View>
-            <View style={styles.ratingContainer}>
-              {renderStars(product.rating)}
-              <Text style={styles.ratingText}>({product.rating})</Text>
-            </View>
           </View>
 
           <View style={styles.pointsSection}>
@@ -138,11 +123,6 @@ const ProductDetails = ({
                 <Text style={styles.analysisSectionTitle}>
                   Waste Disposal Guide
                 </Text>
-                <View style={styles.matchScoreBadge}>
-                  <Text style={styles.matchScoreText}>
-                    {product.wasteGuideMatch.matchScore}% match
-                  </Text>
-                </View>
               </View>
 
               <Text style={styles.hsyTitle}>
@@ -229,26 +209,6 @@ const ProductDetails = ({
                 )}
             </View>
           )}
-        </View>
-
-        {/* Product details */}
-        <View style={styles.detailsCard}>
-          <Text style={styles.detailsTitle}>Product Information</Text>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Barcode</Text>
-            <Text style={styles.detailValue}>{product.barcode}</Text>
-          </View>
-
-          <View style={styles.detailRowLast}>
-            <View style={styles.detailLabelContainer}>
-              <Ionicons name="calendar" size={16} color="#6b7280" />
-              <Text style={styles.detailLabel}>Scanned</Text>
-            </View>
-            <Text style={styles.detailValue}>
-              {formatDate(product.scannedAt)}
-            </Text>
-          </View>
         </View>
 
         {/* AI Analysis Information */}
@@ -427,15 +387,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#374151",
   },
-  ratingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  ratingText: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginLeft: 8,
-  },
+
   pointsSection: {
     flexDirection: "row",
     alignItems: "center",
@@ -473,55 +425,7 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     lineHeight: 20,
   },
-  detailsCard: {
-    margin: 24,
-    padding: 16,
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  detailsTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1f2937",
-    marginBottom: 16,
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(229, 231, 235, 0.5)",
-  },
-  detailRowLast: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  detailLabelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  detailValue: {
-    fontSize: 14,
-    color: "#1f2937",
-    fontFamily: "monospace",
-  },
+
   actionsContainer: {
     padding: 24,
   },
@@ -704,17 +608,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
   },
-  matchScoreBadge: {
-    backgroundColor: "#10b981",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  matchScoreText: {
-    fontSize: 12,
-    color: "#ffffff",
-    fontWeight: "500",
-  },
+
   hsyTitle: {
     fontSize: 18,
     fontWeight: "600",

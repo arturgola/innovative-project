@@ -6,31 +6,53 @@ on:
   pull_request:
 
 jobs:
-  build-test-docker:
+  # FRONTEND JOB
+  frontend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
 
     steps:
-      # 1️⃣ Checkout the code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18  
+          node-version: 18
           cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: npm ci
 
-      # 4️⃣ Run tests
-      - name: Run tests
+      - name: Run frontend tests
         run: npm test
 
-      # 5️⃣ Build Docker image
+  # BACKEND JOB
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run backend tests
+        run: npm test
+
       - name: Build Docker image
         run: docker build -t my-node-app:latest .
-
-    

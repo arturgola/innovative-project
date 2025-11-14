@@ -48,46 +48,10 @@ async function fetchAllTitles() {
       }))
       .sort((a, b) => a.title.localeCompare(b.title));
 
-    // Create markdown content
-    let mdContent = "# HSY Waste Guide Titles\n\n";
-    mdContent += `Generated on: ${new Date().toISOString()}\n`;
-    mdContent += `Total items: ${items.length}\n\n`;
-
-    mdContent += "## All Titles (Alphabetical)\n\n";
-    items.forEach((item, index) => {
-      mdContent += `${index + 1}. **${item.title}**\n`;
-      if (item.synonyms && item.synonyms.length > 0) {
-        mdContent += `   - Synonyms: ${item.synonyms.join(", ")}\n`;
-      }
-      if (item.wasteTypes && item.wasteTypes.length > 0) {
-        mdContent += `   - Waste Types: ${item.wasteTypes.join(", ")}\n`;
-      }
-      if (item.recyclingMethods && item.recyclingMethods.length > 0) {
-        mdContent += `   - Recycling Methods: ${item.recyclingMethods.join(
-          ", "
-        )}\n`;
-      }
-      mdContent += "\n";
-    });
-
-    // Add simple list for quick reference
-    mdContent += "## Simple Title List\n\n";
-    items.forEach((item, index) => {
-      mdContent += `${index + 1}. ${item.title}\n`;
-    });
-
-    // Write to file
-    const outputPath = "../hsy_waste_guide_titles.md";
-    fs.writeFileSync(outputPath, mdContent);
-
-    console.log(
-      `✅ Successfully wrote ${items.length} titles to hsy_waste_guide_titles.md`
-    );
-    console.log(`📄 File location: ${outputPath}`);
-
-    // Also create a JSON file for programmatic use
+    // Create a JSON file for programmatic use
     const jsonPath = "../hsy_waste_guide_data.json";
     fs.writeFileSync(jsonPath, JSON.stringify(items, null, 2));
+    console.log(`✅ Successfully fetched ${items.length} waste guide items`);
     console.log(`📄 JSON data saved to: ${jsonPath}`);
   } catch (error) {
     console.error("❌ Error fetching HSY data:", error.message);

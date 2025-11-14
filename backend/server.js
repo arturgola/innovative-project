@@ -221,10 +221,10 @@ async function getHSYWasteGuideList() {
 
       let successfulFormat = null;
 
-      // Test each pagination format with the second page
+      // Test each pagination format with the second page (don't add items yet)
       for (const formatFunc of paginationFormats) {
         try {
-          const testUrl = formatFunc(1); // Try second page (page 1, or offset 20)
+          const testUrl = formatFunc(2); // Try third page (page 2, or offset 40) for testing
           console.log(`Testing pagination format: ${testUrl}`);
 
           const testResponse = await axios.get(testUrl, {
@@ -240,8 +240,7 @@ async function getHSYWasteGuideList() {
               `✅ Found working pagination format! Got ${testItems.length} items`
             );
             successfulFormat = formatFunc;
-            allWasteItems = [...allWasteItems, ...testItems];
-            break;
+            break; // Don't add items here, we'll fetch them properly below
           }
         } catch (testError) {
           console.log(
@@ -252,19 +251,20 @@ async function getHSYWasteGuideList() {
         }
       }
 
-      // If we found a working format, fetch the remaining pages
+      // If we found a working format, fetch all remaining pages systematically
       if (successfulFormat) {
         console.log(`Fetching remaining pages using successful format...`);
 
-        for (let page = 2; page < Math.min(totalPages, 35); page++) {
+        // Use Set to track unique item IDs to prevent duplicates
+        const seenIds = new Set(allWasteItems.map((item) => item.id));
+
+        // Start from page 2 since page 1 returns the same items as the initial request (page 0/no page param)
+        for (let page = 2; page <= Math.min(totalPages, 35); page++) {
           // Limit to 35 pages max for safety
           try {
             const pageUrl = successfulFormat(page);
             console.log(
-              `Fetching page ${page + 1}/${Math.min(
-                totalPages,
-                35
-              )}: ${pageUrl}`
+              `Fetching page ${page}/${Math.min(totalPages, 35)}: ${pageUrl}`
             );
 
             const pageResponse = await axios.get(pageUrl, {
@@ -276,12 +276,38 @@ async function getHSYWasteGuideList() {
             const pageItems = pageData.hits || pageData;
 
             if (Array.isArray(pageItems) && pageItems.length > 0) {
-              allWasteItems = [...allWasteItems, ...pageItems];
-              console.log(
-                `  ✅ Got ${pageItems.length} more items (total: ${allWasteItems.length})`
-              );
+              // Filter out duplicates based on ID
+              const newItems = pageItems.filter((item) => {
+                if (seenIds.has(item.id)) {
+                  return false;
+                }
+                seenIds.add(item.id);
+                return true;
+              });
+
+              if (newItems.length > 0) {
+                allWasteItems = [...allWasteItems, ...newItems];
+                console.log(
+                  `  ✅ Got ${newItems.length} new items (${
+                    pageItems.length - newItems.length
+                  } duplicates filtered, total: ${allWasteItems.length})`
+                );
+              } else {
+                console.log(
+                  `  ⚠️ All items were duplicates, stopping pagination`
+                );
+                break;
+              }
             } else {
               console.log(`  ⚠️ No more items found, stopping pagination`);
+              break;
+            }
+
+            // Stop if we've reached the expected total count
+            if (allWasteItems.length >= totalCount) {
+              console.log(
+                `  ✅ Reached expected total count of ${totalCount}, stopping pagination`
+              );
               break;
             }
 
@@ -298,7 +324,7 @@ async function getHSYWasteGuideList() {
         }
 
         console.log(
-          `✅ Pagination complete! Fetched ${allWasteItems.length} total items`
+          `✅ Pagination complete! Fetched ${allWasteItems.length} total items (expected: ${totalCount})`
         );
       } else {
         console.log(
@@ -307,8 +333,22 @@ async function getHSYWasteGuideList() {
       }
     }
 
+    // Remove any potential duplicates by ID (final safety check)
+    const uniqueItems = allWasteItems.filter(
+      (item, index, array) =>
+        array.findIndex((otherItem) => otherItem.id === item.id) === index
+    );
+
+    if (uniqueItems.length !== allWasteItems.length) {
+      console.log(
+        `⚠️ Removed ${
+          allWasteItems.length - uniqueItems.length
+        } duplicate items in final cleanup`
+      );
+    }
+
     // Extract only id, title, and synonyms for the cache
-    const simplifiedItems = allWasteItems
+    const simplifiedItems = uniqueItems
       .map((item) => ({
         id: item.id,
         title: item.title || "",
@@ -317,7 +357,7 @@ async function getHSYWasteGuideList() {
       .filter((item) => item.title && item.id); // Only include items with title and id
 
     console.log(
-      `Cached ${simplifiedItems.length} HSY waste guide items (${allWasteItems.length} total before filtering)`
+      `Cached ${simplifiedItems.length} HSY waste guide items (${uniqueItems.length} unique items, ${allWasteItems.length} total before deduplication)`
     );
 
     // Update cache

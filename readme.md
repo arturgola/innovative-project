@@ -272,6 +272,92 @@ GET    /api/users/:id/history   # Get scan history
 
 ---
 
+## 🔍 Examining HSY Cache Data
+
+The backend integrates with HSY (Helsinki Region Environmental Services) Waste Guide API and caches the data for 24 hours. You can examine the cached data using these debug endpoints:
+
+### **Available Debug Endpoints:**
+
+```bash
+# View all cached HSY waste guide items
+GET /hsy-cache
+# Returns: { success, itemCount, items[], cacheTimestamp, cacheAge }
+
+# Search cached items by term
+GET /hsy-search/:term
+# Example: GET /hsy-search/plastic
+# Returns: { success, searchTerm, matchCount, matches[] }
+
+# Test specific HSY waste guide ID
+GET /hsy-test/:id
+# Example: GET /hsy-test/12345
+# Returns: { success, id, details }
+
+# Test HSY API authentication
+GET /hsy-auth-test
+# Returns: { success, message, authMethod, clientId, headers }
+
+# Test HSY API connection
+GET /waste-guide
+# Returns: { success, itemCount, totalResults, items[], responseStructure }
+
+# Search waste guide with OpenAI matching
+POST /waste-guide/search
+# Body: { "searchTerm": "plastic bottle" }
+# Returns: { success, searchTerm, matchId, match }
+```
+
+### **Example Usage:**
+
+```bash
+# Start your backend server
+cd backend && node server.js
+
+# View all cached items (in another terminal)
+curl http://localhost:3000/hsy-cache
+
+# Search for plastic items
+curl http://localhost:3000/hsy-search/plastic
+
+# Test authentication
+curl http://localhost:3000/hsy-auth-test
+
+# Search with AI matching
+curl -X POST http://localhost:3000/waste-guide/search \
+  -H "Content-Type: application/json" \
+  -d '{"searchTerm": "plastic bottle"}'
+```
+
+### **HSY Data Structure:**
+
+**Cached Items (Simplified):**
+
+```json
+{
+  "id": 12345,
+  "title": "Plastic bottle",
+  "synonyms": ["PET bottle", "drink bottle"]
+}
+```
+
+**Detailed Items (Full API Response):**
+
+```json
+{
+  "id": 12345,
+  "title": "Plastic bottle",
+  "synonyms": ["PET bottle", "drink bottle"],
+  "notes": "Rinse before recycling",
+  "wasteTypes": ["recyclable", "plastic"],
+  "recyclingMethods": ["plastic recycling bin"],
+  "instructions": "Remove cap and label if possible"
+}
+```
+
+> **Note**: The HSY cache initializes on server startup and refreshes every 24 hours automatically. If the cache fails to load, it will be loaded on the first API request.
+
+---
+
 ## 🚀 Development Tips
 
 ### **Adding New Screens:**

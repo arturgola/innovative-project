@@ -19,6 +19,13 @@ export interface HSYWasteGuideMatch {
   }[];
 }
 
+export interface AIRecyclingAdvice {
+  advice: string;
+  isDangerous: boolean;
+  dangerWarning?: string;
+  generalTips: string[];
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -41,6 +48,8 @@ export interface Product {
   objectMaterial?: string;
   // HSY Waste Guide match
   wasteGuideMatch?: HSYWasteGuideMatch;
+  // AI Recycling Advice fallback
+  aiRecyclingAdvice?: AIRecyclingAdvice;
 }
 
 export interface UserProfile {

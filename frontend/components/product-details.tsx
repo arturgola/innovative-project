@@ -122,7 +122,7 @@ const ProductDetails = ({
               <View style={styles.analysisSectionHeader}>
                 <Ionicons name="leaf" size={20} color="#10b981" />
                 <Text style={styles.analysisSectionTitle}>
-                  Waste Disposal Guide
+                  HSY Waste Guide API
                 </Text>
               </View>
 
@@ -214,7 +214,7 @@ const ProductDetails = ({
               <View style={styles.analysisSectionHeader}>
                 <Ionicons name="information-circle" size={20} color="#f59e0b" />
                 <Text style={styles.analysisSectionTitle}>
-                  Waste Disposal Guide
+                  HSY Waste Guide API
                 </Text>
               </View>
 
@@ -242,6 +242,80 @@ const ProductDetails = ({
             </View>
           )}
         </View>
+
+        {/* AI Recycling Advice - shown when no HSY match found */}
+        {product.aiRecyclingAdvice && (
+          <View style={styles.descriptionCard}>
+            <View style={styles.analysisSection}>
+              <View style={styles.analysisSectionHeader}>
+                <Ionicons
+                  name={
+                    product.aiRecyclingAdvice.isDangerous ? "warning" : "bulb"
+                  }
+                  size={20}
+                  color={
+                    product.aiRecyclingAdvice.isDangerous
+                      ? "#ef4444"
+                      : "#00AAA3"
+                  }
+                />
+                <Text style={styles.analysisSectionTitle}>
+                  AI Recycling Advice
+                </Text>
+              </View>
+
+              {product.aiRecyclingAdvice.isDangerous &&
+                product.aiRecyclingAdvice.dangerWarning && (
+                  <View style={styles.dangerWarningContainer}>
+                    <View style={styles.dangerWarningHeader}>
+                      <Ionicons name="warning" size={16} color="#ef4444" />
+                      <Text style={styles.dangerWarningTitle}>
+                        Safety Notice
+                      </Text>
+                    </View>
+                    <Text style={styles.dangerWarningText}>
+                      {product.aiRecyclingAdvice.dangerWarning}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.hsyLinkButton}
+                      onPress={() => {
+                        Linking.openURL(
+                          "https://www.hsy.fi/jatteet-ja-kierratys/jateopas-ja-lajitteluohjeet/"
+                        );
+                      }}
+                    >
+                      <Ionicons name="globe" size={16} color="#00AAA3" />
+                      <Text style={styles.hsyLinkText}>
+                        Visit HSY Waste Guide
+                      </Text>
+                      <Ionicons name="open" size={16} color="#00AAA3" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+              <Text style={styles.aiRecyclingAdviceText}>
+                {product.aiRecyclingAdvice.advice}
+              </Text>
+
+              {product.aiRecyclingAdvice.generalTips &&
+                product.aiRecyclingAdvice.generalTips.length > 0 && (
+                  <View style={styles.generalTipsContainer}>
+                    <Text style={styles.generalTipsTitle}>Recycling Tips:</Text>
+                    {product.aiRecyclingAdvice.generalTips.map((tip, index) => (
+                      <View key={index} style={styles.generalTipItem}>
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={14}
+                          color="#10b981"
+                        />
+                        <Text style={styles.generalTipText}>{tip}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+            </View>
+          </View>
+        )}
 
         {/* AI Analysis Information */}
         {product.ecoScore !== undefined && (
@@ -774,9 +848,62 @@ const styles = StyleSheet.create({
   },
   hsyLinkText: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
     color: "#00AAA3",
-    marginHorizontal: 8,
+    marginHorizontal: 4,
+  },
+  // AI Recycling Advice styles
+  dangerWarningContainer: {
+    backgroundColor: "#fef2f2",
+    borderLeftWidth: 4,
+    borderLeftColor: "#ef4444",
+    padding: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+  },
+  dangerWarningHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  dangerWarningTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#ef4444",
+    marginLeft: 6,
+  },
+  dangerWarningText: {
+    fontSize: 14,
+    color: "#7f1d1d",
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  aiRecyclingAdviceText: {
+    fontSize: 14,
+    color: "#374151",
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  generalTipsContainer: {
+    marginTop: 8,
+  },
+  generalTipsTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1f2937",
+    marginBottom: 8,
+  },
+  generalTipItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 6,
+  },
+  generalTipText: {
+    fontSize: 14,
+    color: "#374151",
+    lineHeight: 20,
+    marginLeft: 8,
+    flex: 1,
   },
 });
 

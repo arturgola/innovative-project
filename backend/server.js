@@ -103,6 +103,37 @@ db.run(`ALTER TABLE product_scans ADD COLUMN waste_guide_match TEXT`, (err) => {
   }
 });
 
+// Add AI recycling advice columns to existing table if they don't exist
+db.run(
+  `ALTER TABLE product_scans ADD COLUMN ai_recycling_advice TEXT`,
+  (err) => {
+    if (err && !err.message.includes("duplicate column name")) {
+      console.error("Error adding ai_recycling_advice column:", err.message);
+    }
+  }
+);
+
+db.run(
+  `ALTER TABLE product_scans ADD COLUMN is_dangerous INTEGER DEFAULT 0`,
+  (err) => {
+    if (err && !err.message.includes("duplicate column name")) {
+      console.error("Error adding is_dangerous column:", err.message);
+    }
+  }
+);
+
+db.run(`ALTER TABLE product_scans ADD COLUMN danger_warning TEXT`, (err) => {
+  if (err && !err.message.includes("duplicate column name")) {
+    console.error("Error adding danger_warning column:", err.message);
+  }
+});
+
+db.run(`ALTER TABLE product_scans ADD COLUMN general_tips TEXT`, (err) => {
+  if (err && !err.message.includes("duplicate column name")) {
+    console.error("Error adding general_tips column:", err.message);
+  }
+});
+
 // Helper functions for OpenAI analysis
 async function convertImageToBase64(imagePath) {
   try {
@@ -132,6 +163,83 @@ function cleanOpenAIResponse(content) {
   } catch (error) {
     console.error("Error cleaning OpenAI response:", error);
     return content;
+  }
+}
+
+// AI fallback recycling advice when no HSY match found
+async function getAIRecyclingAdvice(productDescription, objectMaterial) {
+  try {
+    const response = await axios.post(
+      OPENAI_API_URL,
+      {
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: `Analyze this waste item and provide recycling/disposal advice. Return ONLY valid JSON without markdown formatting:
+
+ITEM: "${productDescription}"
+MATERIAL: "${objectMaterial}"
+
+Return this JSON structure:
+{
+  "recyclingAdvice": "Clear recycling instructions",
+  "isDangerous": false,
+  "dangerWarning": null,
+  "generalTips": ["Array of 2-3 practical recycling tips"]
+}
+
+RULES:
+1. If item contains hazardous materials (batteries, chemicals, electronics, medical waste, asbestos, paint, motor oil, etc.), set "isDangerous": true and "dangerWarning": "This item may contain hazardous materials. Please check official waste guide for proper disposal."
+2. Focus on practical disposal advice for common household waste
+3. Keep advice clear and actionable
+4. Include sorting instructions (plastic recycling bin, metal recycling, composting, etc.)
+
+IMPORTANT: Return only the JSON object, no explanatory text or markdown.`,
+          },
+        ],
+        max_tokens: 500,
+        temperature: 0.3,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+      }
+    );
+
+    const adviceContent = response.data.choices[0].message.content;
+
+    try {
+      const cleanedContent = cleanOpenAIResponse(adviceContent);
+      const advice = JSON.parse(cleanedContent);
+
+      return {
+        recyclingAdvice:
+          advice.recyclingAdvice ||
+          "Check local recycling guidelines for this item.",
+        isDangerous: advice.isDangerous || false,
+        dangerWarning: advice.dangerWarning || null,
+        generalTips: advice.generalTips || [],
+      };
+    } catch (parseError) {
+      console.error("Error parsing AI recycling advice:", parseError);
+      return {
+        recyclingAdvice: "Check local recycling guidelines for this item.",
+        isDangerous: false,
+        dangerWarning: null,
+        generalTips: ["Check product packaging for recycling symbols"],
+      };
+    }
+  } catch (error) {
+    console.error("Error getting AI recycling advice:", error);
+    return {
+      recyclingAdvice: "Check local recycling guidelines for this item.",
+      isDangerous: false,
+      dangerWarning: null,
+      generalTips: ["Check product packaging for recycling symbols"],
+    };
   }
 }
 
@@ -692,6 +800,8 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
 
     // Step 4: Fetch detailed HSY waste guide information if match found
     let wasteGuideDetails = null;
+    let aiRecyclingAdvice = null;
+
     if (analysisResult.hsyMatchId) {
       console.log(`Fetching HSY details for ID: ${analysisResult.hsyMatchId}`);
       wasteGuideDetails = await getHSYWasteGuideDetails(
@@ -707,6 +817,17 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
       }
     } else {
       console.log("❌ No HSY waste guide match selected by AI");
+
+      // Step 5: Get AI fallback recycling advice when no HSY match found
+      console.log("Getting AI fallback recycling advice...");
+      aiRecyclingAdvice = await getAIRecyclingAdvice(
+        `${analysisResult.name}, ${analysisResult.category}, ${analysisResult.description}`,
+        objectMaterialResult.shortDescription
+      );
+
+      if (aiRecyclingAdvice) {
+        console.log("✅ Generated AI recycling advice");
+      }
     }
 
     // Calculate points based on confidence and recyclability
@@ -733,8 +854,9 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
       `INSERT INTO product_scans 
        (user_id, name, brand, category, barcode, points, rating, description, 
         recyclability, suggestions, confidence, analysis_method, 
-        object_material, waste_guide_match, image_path, photo_width, photo_height, scanned_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        object_material, waste_guide_match, ai_recycling_advice, is_dangerous, 
+        danger_warning, general_tips, image_path, photo_width, photo_height, scanned_at) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId || null,
         analysisResult.name,
@@ -750,6 +872,12 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
         "openai-vision-with-hsy",
         objectMaterialResult.shortDescription,
         wasteGuideMatchJson,
+        aiRecyclingAdvice ? aiRecyclingAdvice.recyclingAdvice : null,
+        aiRecyclingAdvice ? (aiRecyclingAdvice.isDangerous ? 1 : 0) : 0,
+        aiRecyclingAdvice ? aiRecyclingAdvice.dangerWarning : null,
+        aiRecyclingAdvice
+          ? JSON.stringify(aiRecyclingAdvice.generalTips)
+          : null,
         imagePath,
         0, // photo width will be set by frontend
         0, // photo height will be set by frontend
@@ -806,6 +934,14 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
                 wasteTypes: wasteGuideDetails.wasteTypes || [],
                 recyclingMethods: wasteGuideDetails.recyclingMethods || [],
                 instructions: wasteGuideDetails.instructions || null,
+              }
+            : null,
+          aiRecyclingAdvice: aiRecyclingAdvice
+            ? {
+                advice: aiRecyclingAdvice.recyclingAdvice,
+                isDangerous: aiRecyclingAdvice.isDangerous,
+                dangerWarning: aiRecyclingAdvice.dangerWarning,
+                generalTips: aiRecyclingAdvice.generalTips,
               }
             : null,
         };
@@ -869,6 +1005,20 @@ app.get("/users/:id/scans", (req, res) => {
         wasteGuideMatch: row.waste_guide_match
           ? JSON.parse(row.waste_guide_match)
           : null,
+        aiRecyclingAdvice:
+          row.ai_recycling_advice ||
+          row.is_dangerous ||
+          row.danger_warning ||
+          row.general_tips
+            ? {
+                advice: row.ai_recycling_advice,
+                isDangerous: row.is_dangerous === 1,
+                dangerWarning: row.danger_warning,
+                generalTips: row.general_tips
+                  ? JSON.parse(row.general_tips)
+                  : [],
+              }
+            : null,
         photoUri: `/uploads/${path.basename(row.image_path)}`,
         photoWidth: row.photo_width,
         photoHeight: row.photo_height,

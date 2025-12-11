@@ -12,10 +12,6 @@ export default function TabTwoScreen() {
     return null; // Let the main layout handle navigation
   }
 
-  const handleBack = () => {
-    router.back();
-  };
-
   const handleViewProduct = (product: ProductAnalysisResult) => {
     // Convert ProductAnalysisResult to Product type for context
     const productForContext = {
@@ -40,12 +36,18 @@ export default function TabTwoScreen() {
         | "basic"
         | "barcode",
       objectMaterial: product.objectMaterial,
+
+      openedFromHistory: true,
     };
-    setCurrentProduct(productForContext);
+
+    setCurrentProduct(productForContext as any);
     router.push("/product" as any);
   };
 
   return (
-    <StatisticsScreen onBack={handleBack} onViewProduct={handleViewProduct} />
+    <StatisticsScreen
+      onBack={() => {}}
+      onViewProduct={handleViewProduct} 
+    />
   );
 }

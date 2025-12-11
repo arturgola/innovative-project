@@ -18,11 +18,14 @@ export default function ProductPage() {
     return null;
   }
 
+  const hideCollectButton = !!(currentProduct as any).openedFromHistory;
+
   return (
     <ProductDetails
       product={currentProduct}
       onBack={handleBack}
       onContinue={handleContinue}
+      hideCollectButton={hideCollectButton}
     />
   );
 }

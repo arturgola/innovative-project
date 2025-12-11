@@ -18,12 +18,14 @@ interface ProductDetailsProps {
   product: Product;
   onBack: () => void;
   onContinue: () => void;
+  hideCollectButton?: boolean;  
 }
 
 const ProductDetails = ({
   product,
   onBack,
   onContinue,
+  hideCollectButton = false,
 }: ProductDetailsProps) => {
   const [showAlternatives, setShowAlternatives] = useState(false);
 
@@ -574,8 +576,9 @@ const ProductDetails = ({
           </View>
         )}
 
-        {/* Actions */}
+      {/* Actions */}
         <View style={styles.actionsContainer}>
+           {!hideCollectButton && onContinue && (
           <TouchableOpacity onPress={onContinue} style={styles.primaryButton}>
             <LinearGradient
               colors={["#00AAA3", "#008782"]}
@@ -586,6 +589,7 @@ const ProductDetails = ({
               </Text>
             </LinearGradient>
           </TouchableOpacity>
+            )}
 
           <TouchableOpacity
             onPress={handleShare}
@@ -596,6 +600,7 @@ const ProductDetails = ({
         </View>
       </ScrollView>
     </View>
+
   );
 };
 

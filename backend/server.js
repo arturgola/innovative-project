@@ -1087,18 +1087,52 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
           return res.status(500).json({ error: err.message });
         }
 
-        // If user provided, update their stats
+                // If user provided, update their stats and level
         if (userId) {
-          db.run(
-            "UPDATE users SET total_points = total_points + ?, scans_today = scans_today + 1 WHERE id = ?",
-            [points, userId],
-            (updateErr) => {
-              if (updateErr) {
-                console.error("Error updating user stats:", updateErr);
-              }
-            }
-          );
+                //  Get current total_points
+      db.get(
+    "SELECT total_points FROM users WHERE id = ?",
+    [userId],
+    (getErr, userRow) => {
+      if (getErr) {
+        console.error("Error fetching user for level update:", getErr);
+        return;
+      }
+      if (!userRow) {
+        console.warn("User not found for level update:", userId);
+        return;
+      }
+
+      //  Calculate new total points
+      const previousTotal = userRow.total_points || 0;
+      const newTotalPoints = previousTotal + points;
+
+      //  Calculate new level based on total points
+      const newLevel = calculateLevel(newTotalPoints);
+
+      //  Save updated stats + level
+      db.run(
+        `UPDATE users
+         SET total_points = ?,
+             level = ?,
+             scans_today = COALESCE(scans_today, 0) + 1,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [newTotalPoints, newLevel, userId],
+        (updateErr) => {
+          if (updateErr) {
+            console.error("Error updating user stats/level:", updateErr);
+          } else {
+            console.log(
+              `User ${userId} updated: total_points=${newTotalPoints}, level=${newLevel}`
+            );
+          }
         }
+      );
+    }
+  );
+}
+
 
         // Return the complete product data
         const productWithAnalysis = {
@@ -1172,6 +1206,11 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
     });
   }
 });
+
+function calculateLevel(totalPoints) {
+  const safePoints = totalPoints || 0;
+  return Math.floor(safePoints / 200) + 1;
+}
 
 // Get user's scan history
 app.get("/users/:id/scans", (req, res) => {
@@ -1527,29 +1566,43 @@ app.put("/users/:id", (req, res) => {
 
   const updatedAt = new Date().toISOString();
 
-  db.run(
-    "UPDATE users SET name = ?, level = ?, total_points = ?, scans_today = ?, updated_at = ? WHERE id = ?",
-    [name.trim(), level, total_points, scans_today, updatedAt, userId],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      if (this.changes === 0)
-        return res.status(404).json({ error: "User not found" });
+  // fetch the current user
+  db.get("SELECT * FROM users WHERE id = ?", [userId], (err, existing) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!existing) return res.status(404).json({ error: "User not found" });
 
-      // Return updated user
-      db.get("SELECT * FROM users WHERE id = ?", [userId], (err, row) => {
+    const newName = name.trim();
+    const newLevel =
+      level !== undefined ? level : existing.level;
+    const newTotalPoints =
+      total_points !== undefined ? total_points : existing.total_points;
+    const newScansToday =
+      scans_today !== undefined ? scans_today : existing.scans_today;
+
+    db.run(
+      "UPDATE users SET name = ?, level = ?, total_points = ?, scans_today = ?, updated_at = ? WHERE id = ?",
+      [newName, newLevel, newTotalPoints, newScansToday, updatedAt, userId],
+      function (err) {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({
-          id: row.id,
-          name: row.name,
-          level: row.level,
-          totalPoints: row.total_points,
-          scansToday: row.scans_today,
-          joinedDate: row.joined_date,
+        if (this.changes === 0)
+          return res.status(404).json({ error: "User not found" });
+
+        db.get("SELECT * FROM users WHERE id = ?", [userId], (err, row) => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({
+            id: row.id,
+            name: row.name,
+            level: row.level,
+            totalPoints: row.total_points,
+            scansToday: row.scans_today,
+            joinedDate: row.joined_date,
+          });
         });
-      });
-    }
-  );
+      }
+    );
+  });
 });
+
 
 // Delete user
 app.delete("/users/:id", (req, res) => {

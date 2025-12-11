@@ -63,14 +63,14 @@ const UserProfileScreen = ({
   };
 
   const getLevelProgress = () => {
-    const currentLevelMin = (userProfile.level - 1) * 100;
+    const currentLevelMin = (userProfile.level - 1) * 200;
     const nextLevelMin = userProfile.level * 100;
-    const progress = ((userProfile.totalPoints - currentLevelMin) / 100) * 100;
+    const progress = ((userProfile.totalPoints - currentLevelMin) / 200) * 100;
     return Math.min(progress, 100);
   };
 
   const getNextLevelPoints = () => {
-    const nextLevelMin = userProfile.level * 100;
+    const nextLevelMin = userProfile.level * 200;
     return Math.max(0, nextLevelMin - userProfile.totalPoints);
   };
 

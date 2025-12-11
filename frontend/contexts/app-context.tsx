@@ -20,6 +20,7 @@ interface AppState {
   addScannedProduct: (product: Product) => void;
   createNewUser: (name: string) => Promise<void>;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const defaultUserProfile: UserProfile = {
@@ -115,6 +116,21 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     }
   };
 
+  const refreshUserProfile = async () => {
+  if (!userProfile.id) {
+    console.error("Cannot refresh user: no user ID");
+    return;
+  }
+
+  try {
+    const updatedUser = await ApiService.getUserById(userProfile.id);
+    setUserProfile(updatedUser);
+  } catch (error) {
+    console.error("Error refreshing user profile:", error);
+  }
+};
+
+
   const addScannedProduct = async (product: Product) => {
     setScannedProducts((prev) => [...prev, product]);
 
@@ -122,13 +138,13 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     if (userProfile.id) {
       try {
         const updatedUser = await ApiService.getUserById(userProfile.id);
-        setUserProfile(updatedUser);
-      } catch (error) {
-        console.error("Error refreshing user profile:", error);
+      setUserProfile(updatedUser);
+    } catch (error) {
+      console.error("Error refreshing user profile:", error);
         // Fallback: update local state manually
         const newTotalPoints = userProfile.totalPoints + product.points;
         const newScansToday = userProfile.scansToday + 1;
-        const newLevel = Math.floor(newTotalPoints / 100) + 1;
+        const newLevel = Math.floor(newTotalPoints / 200) + 1;
 
         setUserProfile({
           ...userProfile,
@@ -154,6 +170,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         addScannedProduct,
         createNewUser,
         updateUserProfile,
+        refreshUserProfile,
       }}
     >
       {children}

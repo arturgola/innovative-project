@@ -83,6 +83,18 @@ const StatisticsScreen = ({ onBack, onViewProduct }: StatisticsScreenProps) => {
   const categoryStats = getCategoryStats();
   const totalPoints = getTotalPoints();
 
+   const getLevelProgress = () => {
+    const currentLevelMin = (userProfile.level - 1) * 200;
+    const nextLevelMin = userProfile.level * 100;
+    const progress = ((userProfile.totalPoints - currentLevelMin) / 200) * 100;
+    return Math.min(progress, 100);
+  };
+
+  const getNextLevelPoints = () => {
+    const nextLevelMin = userProfile.level * 200;
+    return Math.max(0, nextLevelMin - userProfile.totalPoints);
+  };
+
   const renderProduct = ({
     item: product,
   }: {
@@ -176,8 +188,42 @@ const StatisticsScreen = ({ onBack, onViewProduct }: StatisticsScreenProps) => {
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
-        ) : (
+         ) : (
           <>
+            {/* Level progress (moved from profile screen) */}
+            <View style={styles.levelSection}>
+              <LinearGradient
+                colors={["rgba(0,170,163,0.1)", "rgba(100,195,205,0.1)"]}
+                style={styles.levelCard}
+              >
+                <View style={styles.progressHeader}>
+                  <Text style={styles.progressLabel}>
+                    Level {userProfile.level}
+                  </Text>
+                  <Text style={styles.progressLabel}>
+                    Progress
+                  </Text>
+                  <Text style={styles.progressLabel}>
+                    Level {userProfile.level + 1}
+                  </Text>
+                </View>
+
+                <View style={styles.progressBar}>
+                  <LinearGradient
+                    colors={["#00AAA3", "#008782"]}
+                    style={[
+                      styles.progressFill,
+                      { width: `${getLevelProgress()}%` },
+                    ]}
+                  />
+                </View>
+
+                <Text style={styles.progressPoints}>
+                  {getNextLevelPoints()} points needed
+                </Text>
+              </LinearGradient>
+            </View>
+
             {/* Overview stats */}
             <View style={styles.statsGrid}>
               <LinearGradient
@@ -522,6 +568,43 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "500",
+  },
+   levelSection: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+  },
+  levelCard: {
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(0,170,163,0.2)",
+    backgroundColor: "#ffffff",
+  },
+  progressHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  progressLabel: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  progressPoints: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#6b7280",
+    textAlign: "center",
+  },
+  progressBar: {
+    width: "100%",
+    height: 8,
+    backgroundColor: "rgba(156, 163, 175, 0.2)",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: 8,
+    borderRadius: 4,
   },
 });
 

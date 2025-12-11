@@ -23,6 +23,14 @@ interface HSYWasteGuideMatch {
   }[];
 }
 
+interface AlternativeAnswer {
+  itemName: string;
+  material: string;
+  sortingExplanation: string;
+  confidence: number;
+  hsyMatchId?: number | null;
+}
+
 export interface ProductAnalysisResult {
   id: number;
   name: string;
@@ -43,6 +51,7 @@ export interface ProductAnalysisResult {
   photoWidth: number;
   photoHeight: number;
   scannedAt: string;
+  alternativeAnswers?: AlternativeAnswer[];
 }
 
 export class ApiService {

@@ -26,6 +26,14 @@ export interface AIRecyclingAdvice {
   generalTips: string[];
 }
 
+export interface AlternativeAnswer {
+  itemName: string;
+  material: string;
+  sortingExplanation: string;
+  confidence: number;
+  hsyMatchId?: number | null;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -50,6 +58,8 @@ export interface Product {
   wasteGuideMatch?: HSYWasteGuideMatch;
   // AI Recycling Advice fallback
   aiRecyclingAdvice?: AIRecyclingAdvice;
+  // Alternative answers
+  alternativeAnswers?: AlternativeAnswer[];
 }
 
 export interface UserProfile {

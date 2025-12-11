@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -25,6 +25,8 @@ const ProductDetails = ({
   onBack,
   onContinue,
 }: ProductDetailsProps) => {
+  const [showAlternatives, setShowAlternatives] = useState(false);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -114,6 +116,91 @@ const ProductDetails = ({
               <Text style={styles.analysisSectionTitle}>AI Analysis</Text>
             </View>
             <Text style={styles.descriptionText}>{product.description}</Text>
+
+            {/* Alternative Answers - Expandable inline */}
+            {product.alternativeAnswers &&
+              product.alternativeAnswers.length > 0 && (
+                <View style={styles.alternativesInlineContainer}>
+                  <TouchableOpacity
+                    onPress={() => setShowAlternatives(!showAlternatives)}
+                    style={styles.alternativesInlineHeader}
+                  >
+                    <View style={styles.alternativesHeaderLeft}>
+                      <Ionicons name="options" size={18} color="#6b7280" />
+                      <Text style={styles.alternativesInlineTitle}>
+                        Not satisfied? Try alternative answers
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={showAlternatives ? "chevron-up" : "chevron-down"}
+                      size={18}
+                      color="#6b7280"
+                    />
+                  </TouchableOpacity>
+
+                  {showAlternatives && (
+                    <View style={styles.alternativesInlineContent}>
+                      <Text style={styles.alternativesSubtitle}>
+                        Select a different interpretation if the primary
+                        analysis doesn't match:
+                      </Text>
+
+                      {product.alternativeAnswers.map((alternative, index) => (
+                        <View key={index} style={styles.alternativeItem}>
+                          <View style={styles.alternativeItemHeader}>
+                            <View style={styles.alternativeItemHeaderLeft}>
+                              <Ionicons
+                                name="cube-outline"
+                                size={18}
+                                color="#00AAA3"
+                              />
+                              <Text style={styles.alternativeItemName}>
+                                {alternative.itemName}
+                              </Text>
+                            </View>
+                            <View style={styles.alternativeConfidenceBadge}>
+                              <Text style={styles.alternativeConfidenceText}>
+                                {alternative.confidence}%
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={styles.alternativeMaterialRow}>
+                            <Ionicons name="apps" size={14} color="#6b7280" />
+                            <Text style={styles.alternativeMaterialText}>
+                              Material: {alternative.material}
+                            </Text>
+                          </View>
+
+                          <View style={styles.alternativeSortingBox}>
+                            <Ionicons
+                              name="information-circle"
+                              size={16}
+                              color="#00AAA3"
+                            />
+                            <Text style={styles.alternativeSortingText}>
+                              {alternative.sortingExplanation}
+                            </Text>
+                          </View>
+
+                          {alternative.hsyMatchId && (
+                            <View style={styles.alternativeHsyBadge}>
+                              <Ionicons
+                                name="checkmark-circle"
+                                size={14}
+                                color="#10b981"
+                              />
+                              <Text style={styles.alternativeHsyText}>
+                                HSY Waste Guide match found
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
           </View>
 
           {/* HSY Waste Guide Match */}
@@ -904,6 +991,160 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginLeft: 8,
     flex: 1,
+  },
+  // Alternative Answers Inline Styles
+  alternativesInlineContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(229, 231, 235, 0.5)",
+  },
+  alternativesInlineHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    backgroundColor: "#f9fafb",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  alternativesHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  alternativesInlineTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginLeft: 8,
+    flex: 1,
+  },
+  alternativesInlineContent: {
+    marginTop: 12,
+  },
+  alternativesSubtitle: {
+    fontSize: 13,
+    color: "#6b7280",
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  alternativeItem: {
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  alternativeItemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  alternativeItemHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  alternativeItemName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1f2937",
+    marginLeft: 6,
+    flex: 1,
+  },
+  alternativeConfidenceBadge: {
+    backgroundColor: "#E6FAFB",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  alternativeConfidenceText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#00AAA3",
+  },
+  alternativeMaterialRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  alternativeMaterialText: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginLeft: 6,
+  },
+  alternativeSortingBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#f9fafb",
+    padding: 10,
+    borderRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: "#00AAA3",
+    marginBottom: 6,
+  },
+  alternativeSortingText: {
+    fontSize: 12,
+    color: "#374151",
+    lineHeight: 16,
+    marginLeft: 6,
+    flex: 1,
+  },
+  alternativeHsyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#ecfdf5",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  alternativeHsyText: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: "#10b981",
+    marginLeft: 4,
+  },
+  // Old styles to remove
+  alternativesCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    marginHorizontal: 24,
+    marginTop: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  alternativesHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    backgroundColor: "#f9fafb",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+  alternativesHeaderTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#374151",
+    marginLeft: 10,
+    flex: 1,
+  },
+  alternativesContent: {
+    padding: 16,
   },
 });
 

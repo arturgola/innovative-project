@@ -134,6 +134,16 @@ db.run(`ALTER TABLE product_scans ADD COLUMN general_tips TEXT`, (err) => {
   }
 });
 
+// Add alternative_answers column to existing table if it doesn't exist
+db.run(
+  `ALTER TABLE product_scans ADD COLUMN alternative_answers TEXT`,
+  (err) => {
+    if (err && !err.message.includes("duplicate column name")) {
+      console.error("Error adding alternative_answers column:", err.message);
+    }
+  }
+);
+
 // Helper functions for OpenAI analysis
 async function convertImageToBase64(imagePath) {
   try {
@@ -578,7 +588,20 @@ async function analyzeProductImage(imagePath, hsyWasteGuideList) {
   try {
     const base64Image = await convertImageToBase64(imagePath);
 
-    // Step 1: First analyze the image to get product description
+    // Format HSY waste guide list for comparison
+    const hsyListFormatted = hsyWasteGuideList
+      .slice(0, 150)
+      .map(
+        (item) =>
+          `ID: ${item.id}, Title: "${item.title}"${
+            item.synonyms.length > 0
+              ? `, Synonyms: [${item.synonyms.join(", ")}]`
+              : ""
+          }`
+      )
+      .join("\n");
+
+    // Step 1: Analyze the image and get main answer + 4 alternatives
     const analysisResponse = await axios.post(
       OPENAI_API_URL,
       {
@@ -589,27 +612,55 @@ async function analyzeProductImage(imagePath, hsyWasteGuideList) {
             content: [
               {
                 type: "text",
-                text: `Analyze this image focusing on PACKAGING and WASTE DISPOSAL. What materials need to be disposed of? Return ONLY valid JSON without any markdown formatting or code blocks:
+                text: `Analyze the item in this image. Identify what it is and what material it's made of.
+
+Provide 1 PRIMARY answer (most likely) and 4 ALTERNATIVE answers (other possibilities).
+
+Return ONLY valid JSON without markdown formatting or code blocks:
 
 {
-  "name": "Package/Container type (e.g., 'Plastic bag', 'Glass bottle', 'Metal can')",
-  "brand": "Brand name if visible", 
-  "category": "Packaging category (e.g., 'Food packaging', 'Beverage container', 'Cosmetic container')",
-  "recyclability": "Type of recyclability based on packaging material",
-  "description": "Description of the PACKAGING material and type, not the contents",
-  "suggestions": ["Array of disposal and recycling suggestions for the packaging"],
-  "confidence": "Confidence level from 0-100",
-  "keywords": ["Focus on packaging materials like 'plastic', 'bag', 'bottle', 'metal', 'glass', 'cardboard', 'paper', etc."]
+  "primaryAnswer": {
+    "itemName": "Simple item name (e.g., 'Plastic bottle', 'Metal can', 'Glass jar')",
+    "material": "Primary material (plastic, metal, glass, paper, cardboard, etc.)",
+    "brand": "Brand name if visible, or 'Unknown'",
+    "category": "Item category (e.g., 'Beverage container', 'Food packaging', 'Electronics')",
+    "sortingExplanation": "Brief explanation of how to sort/dispose this item (1-2 sentences)",
+    "confidence": 85,
+    "keywords": ["keyword1", "keyword2"]
+  },
+  "alternativeAnswers": [
+    {
+      "itemName": "Alternative item name",
+      "material": "Material type",
+      "sortingExplanation": "How to sort/dispose this alternative (1-2 sentences)",
+      "confidence": 60
+    },
+    {
+      "itemName": "Alternative item name 2",
+      "material": "Material type",
+      "sortingExplanation": "How to sort/dispose this alternative (1-2 sentences)",
+      "confidence": 50
+    },
+    {
+      "itemName": "Alternative item name 3",
+      "material": "Material type",
+      "sortingExplanation": "How to sort/dispose this alternative (1-2 sentences)",
+      "confidence": 40
+    },
+    {
+      "itemName": "Alternative item name 4",
+      "material": "Material type",
+      "sortingExplanation": "How to sort/dispose this alternative (1-2 sentences)",
+      "confidence": 30
+    }
+  ]
 }
 
-CRITICAL: Focus on the PACKAGING/CONTAINER that needs disposal, NOT the product contents. For example:
-- If it's food in a plastic bag → analyze the plastic bag
-- If it's drink in a glass bottle → analyze the glass bottle  
-- If it's cosmetics in a metal tube → analyze the metal tube
-
-Include material types (plastic, metal, glass, paper, cardboard) and packaging forms (bag, bottle, can, box, tube) in your keywords.
-
-IMPORTANT: Return only the JSON object, no markdown formatting, no code blocks, no explanatory text.`,
+IMPORTANT: 
+- Be simple and direct - just identify the item and material
+- Alternatives should be genuinely different possibilities (different materials or item types)
+- Sorting explanations should be practical and brief
+- Return only JSON, no markdown, no explanatory text`,
               },
               {
                 type: "image_url",
@@ -621,8 +672,8 @@ IMPORTANT: Return only the JSON object, no markdown formatting, no code blocks, 
             ],
           },
         ],
-        max_tokens: 1000,
-        temperature: 0.3,
+        max_tokens: 1500,
+        temperature: 0.4,
       },
       {
         headers: {
@@ -650,32 +701,27 @@ IMPORTANT: Return only the JSON object, no markdown formatting, no code blocks, 
         recyclability: "Check local guidelines",
         description:
           "Product analysis incomplete. Please try again with a clearer image.",
-        suggestions: [
-          "Check product packaging for recycling symbols",
-          "Consider eco-friendly alternatives",
-        ],
+        suggestions: ["Check product packaging for recycling symbols"],
         confidence: 30,
         keywords: [],
         hsyMatchId: null,
+        alternativeAnswers: [],
       };
     }
 
-    // Step 2: Compare product description with HSY waste guide items
-    const productKeywords = (analysisResult.keywords || []).join(", ");
-    const productDescription = `${analysisResult.name}, ${analysisResult.category}, ${analysisResult.description}, ${productKeywords}`;
+    // Extract primary answer fields
+    const primary = analysisResult.primaryAnswer || {};
+    const name = primary.itemName || "Unknown Product";
+    const brand = primary.brand || "Unknown";
+    const category = primary.category || "General Item";
+    const material = primary.material || "Unknown material";
+    const sortingExplanation =
+      primary.sortingExplanation || "Check local guidelines";
+    const confidence = primary.confidence || 50;
+    const keywords = primary.keywords || [];
 
-    // Format HSY waste guide list for comparison
-    const hsyListFormatted = hsyWasteGuideList
-      .slice(0, 150)
-      .map(
-        (item) =>
-          `ID: ${item.id}, Title: "${item.title}"${
-            item.synonyms.length > 0
-              ? `, Synonyms: [${item.synonyms.join(", ")}]`
-              : ""
-          }`
-      )
-      .join("\n");
+    // Step 2: Find HSY match for primary answer
+    const productDescription = `${name}, ${material}, ${category}`;
 
     const matchingResponse = await axios.post(
       OPENAI_API_URL,
@@ -687,26 +733,17 @@ IMPORTANT: Return only the JSON object, no markdown formatting, no code blocks, 
             content: [
               {
                 type: "text",
-                text: `Find the best HSY waste guide match for this PACKAGING/CONTAINER:
+                text: `Find the best HSY waste guide match for this item:
 
-PACKAGING TO MATCH: "${productDescription}"
+ITEM: "${productDescription}"
 
 HSY Waste Guide Items (Finnish waste management):
 ${hsyListFormatted}
 
-Focus on PACKAGING MATERIALS and DISPOSAL. Match based on:
-1. MATERIAL TYPE: plastic, metal, glass, paper, cardboard
-2. PACKAGING FORM: bag, bottle, can, container, box, tube, wrapper
-3. FOOD/NON-FOOD packaging categories
-4. Synonyms for packaging materials
-
-EXAMPLES:
-- "plastic bag" → look for plastic packaging, bags, food packaging
-- "glass bottle" → look for glass containers, bottles
-- "metal can" → look for metal containers, cans, aluminum
-- "cardboard box" → look for cardboard, paper packaging
-
-PRIORITIZE: Material type matches over content type. A plastic bag for marshmallows should match plastic packaging items, not candy/food items.
+Match based on:
+1. Material type: ${material}
+2. Item type: ${name}
+3. Category: ${category}
 
 Return ONLY the ID number of the best matching HSY item, or "null" if no good match exists.
 Response format: Just the ID number (e.g., "123") or "null"`,
@@ -729,7 +766,6 @@ Response format: Just the ID number (e.g., "123") or "null"`,
       matchingResponse.data.choices[0].message.content.trim();
     let hsyMatchId = null;
 
-    // Parse the matching result
     if (matchContent && matchContent !== "null" && matchContent !== "NULL") {
       const parsedId = parseInt(matchContent.replace(/['"]/g, ""));
       if (!isNaN(parsedId)) {
@@ -737,15 +773,88 @@ Response format: Just the ID number (e.g., "123") or "null"`,
       }
     }
 
-    console.log(`Product: "${productDescription}"`);
-    console.log(`Available HSY items count: ${hsyWasteGuideList.length}`);
-    console.log(`Sample HSY items:`, hsyWasteGuideList.slice(0, 3));
-    console.log(`HSY Match ID selected by AI: ${hsyMatchId}`);
+    console.log(`Primary item: "${productDescription}"`);
+    console.log(`HSY Match ID: ${hsyMatchId}`);
 
-    // Add the HSY match ID to the analysis result
-    analysisResult.hsyMatchId = hsyMatchId;
+    // Step 3: Process alternative answers and find HSY matches for each
+    const alternativeAnswers = [];
+    const alternatives = analysisResult.alternativeAnswers || [];
 
-    return analysisResult;
+    for (let i = 0; i < alternatives.length && i < 4; i++) {
+      const alt = alternatives[i];
+      const altDescription = `${alt.itemName}, ${alt.material}`;
+
+      // Try to find HSY match for this alternative
+      const altMatchingResponse = await axios.post(
+        OPENAI_API_URL,
+        {
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `Find HSY waste guide match for: "${altDescription}"
+
+HSY Items:
+${hsyListFormatted}
+
+Return only the ID number or "null".`,
+                },
+              ],
+            },
+          ],
+          max_tokens: 50,
+          temperature: 0.1,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
+          },
+        }
+      );
+
+      const altMatchContent =
+        altMatchingResponse.data.choices[0].message.content.trim();
+      let altHsyMatchId = null;
+
+      if (
+        altMatchContent &&
+        altMatchContent !== "null" &&
+        altMatchContent !== "NULL"
+      ) {
+        const parsedId = parseInt(altMatchContent.replace(/['"]/g, ""));
+        if (!isNaN(parsedId)) {
+          altHsyMatchId = parsedId;
+        }
+      }
+
+      alternativeAnswers.push({
+        itemName: alt.itemName,
+        material: alt.material,
+        sortingExplanation: alt.sortingExplanation,
+        confidence: alt.confidence,
+        hsyMatchId: altHsyMatchId,
+      });
+    }
+
+    // Build final result
+    const result = {
+      name: name,
+      brand: brand,
+      category: category,
+      recyclability: material,
+      description: sortingExplanation,
+      suggestions: [sortingExplanation],
+      confidence: confidence,
+      keywords: keywords,
+      hsyMatchId: hsyMatchId,
+      alternativeAnswers: alternativeAnswers,
+    };
+
+    return result;
   } catch (error) {
     console.error("Error analyzing image with OpenAI:", error);
     throw error;
@@ -855,8 +964,8 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
        (user_id, name, brand, category, barcode, points, rating, description, 
         recyclability, suggestions, confidence, analysis_method, 
         object_material, waste_guide_match, ai_recycling_advice, is_dangerous, 
-        danger_warning, general_tips, image_path, photo_width, photo_height, scanned_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        danger_warning, general_tips, alternative_answers, image_path, photo_width, photo_height, scanned_at) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId || null,
         analysisResult.name,
@@ -878,6 +987,7 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
         aiRecyclingAdvice
           ? JSON.stringify(aiRecyclingAdvice.generalTips)
           : null,
+        JSON.stringify(analysisResult.alternativeAnswers || []),
         imagePath,
         0, // photo width will be set by frontend
         0, // photo height will be set by frontend
@@ -944,6 +1054,7 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
                 generalTips: aiRecyclingAdvice.generalTips,
               }
             : null,
+          alternativeAnswers: analysisResult.alternativeAnswers || [],
         };
 
         res.json(productWithAnalysis);
@@ -1019,6 +1130,9 @@ app.get("/users/:id/scans", (req, res) => {
                   : [],
               }
             : null,
+        alternativeAnswers: row.alternative_answers
+          ? JSON.parse(row.alternative_answers)
+          : [],
         photoUri: `/uploads/${path.basename(row.image_path)}`,
         photoWidth: row.photo_width,
         photoHeight: row.photo_height,

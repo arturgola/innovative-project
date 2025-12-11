@@ -747,19 +747,20 @@ ITEM: "${productDescription}"
 HSY Waste Guide Items (Finnish waste management):
 ${hsyListFormatted}
 
-Match based on:
-1. Material type: ${material}
-2. Item type: ${name}
-3. Category: ${category}
+MATCHING STRATEGY:
+1. FIRST: Try to find an exact match based on the item type (${name}) and category (${category})
+2. IF NO EXACT MATCH: Fall back to matching by primary material type (${material})
+   - For example: if item is "plastic bottle" but not found, match to general "plastic" waste category
+   - If item is "aluminum can" but not found, match to general "metal" or "aluminum" waste category
 
-Return a JSON object with the ID and a brief explanation of why you chose it.
-Format: {"id": 123, "reasoning": "Brief explanation why this HSY item matches"}
-If no good match exists, return: {"id": null, "reasoning": "Brief explanation why no match found"}`,
+Return a JSON object with the ID and a brief explanation of your matching decision.
+Format: {"id": 123, "reasoning": "Brief explanation - mention if exact match or material-based fallback"}
+If no match exists even by material, return: {"id": null, "reasoning": "Brief explanation why no match found"}`,
               },
             ],
           },
         ],
-        max_tokens: 150,
+        max_tokens: 200,
         temperature: 0.1,
       },
       {
@@ -826,12 +827,16 @@ If no good match exists, return: {"id": null, "reasoning": "Brief explanation wh
 HSY Items:
 ${hsyListFormatted}
 
-Return JSON: {"id": number_or_null, "reasoning": "brief explanation"}`,
+MATCHING STRATEGY:
+1. FIRST: Try exact match for item type "${alt.itemName}"
+2. IF NO EXACT MATCH: Match by material type "${alt.material}"
+
+Return JSON: {"id": number_or_null, "reasoning": "brief explanation - exact or material-based"}`,
                 },
               ],
             },
           ],
-          max_tokens: 150,
+          max_tokens: 200,
           temperature: 0.1,
         },
         {

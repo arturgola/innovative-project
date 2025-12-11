@@ -32,6 +32,23 @@ export interface AlternativeAnswer {
   sortingExplanation: string;
   confidence: number;
   hsyMatchId?: number | null;
+  wasteGuideMatch?: {
+    id: string;
+    title: string;
+    synonyms: string[];
+    notes?: string | null;
+    wasteTypes?: {
+      id: string;
+      title: string;
+      description: string;
+    }[];
+    recyclingMethods?: {
+      id: string;
+      title: string;
+      description: string;
+      isFree: boolean;
+    }[];
+  } | null;
 }
 
 export interface Product {

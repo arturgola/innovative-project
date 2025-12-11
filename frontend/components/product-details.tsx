@@ -145,58 +145,153 @@ const ProductDetails = ({
                         analysis doesn't match:
                       </Text>
 
-                      {product.alternativeAnswers.map((alternative, index) => (
-                        <View key={index} style={styles.alternativeItem}>
-                          <View style={styles.alternativeItemHeader}>
-                            <View style={styles.alternativeItemHeaderLeft}>
+                      {product.alternativeAnswers.map((alternative, index) => {
+                        // Debug logging
+                        if (index === 0) {
+                          console.log(
+                            "Alternative answer sample:",
+                            JSON.stringify(alternative, null, 2)
+                          );
+                        }
+
+                        return (
+                          <View key={index} style={styles.alternativeItem}>
+                            <View style={styles.alternativeItemHeader}>
+                              <View style={styles.alternativeItemHeaderLeft}>
+                                <Ionicons
+                                  name="cube-outline"
+                                  size={18}
+                                  color="#00AAA3"
+                                />
+                                <Text style={styles.alternativeItemName}>
+                                  {alternative.itemName}
+                                </Text>
+                              </View>
+                              <View style={styles.alternativeConfidenceBadge}>
+                                <Text style={styles.alternativeConfidenceText}>
+                                  {alternative.confidence}%
+                                </Text>
+                              </View>
+                            </View>
+
+                            <View style={styles.alternativeMaterialRow}>
+                              <Ionicons name="apps" size={14} color="#6b7280" />
+                              <Text style={styles.alternativeMaterialText}>
+                                Material: {alternative.material}
+                              </Text>
+                            </View>
+
+                            <View style={styles.alternativeSortingBox}>
                               <Ionicons
-                                name="cube-outline"
-                                size={18}
+                                name="information-circle"
+                                size={16}
                                 color="#00AAA3"
                               />
-                              <Text style={styles.alternativeItemName}>
-                                {alternative.itemName}
+                              <Text style={styles.alternativeSortingText}>
+                                {alternative.sortingExplanation}
                               </Text>
                             </View>
-                            <View style={styles.alternativeConfidenceBadge}>
-                              <Text style={styles.alternativeConfidenceText}>
-                                {alternative.confidence}%
-                              </Text>
-                            </View>
-                          </View>
 
-                          <View style={styles.alternativeMaterialRow}>
-                            <Ionicons name="apps" size={14} color="#6b7280" />
-                            <Text style={styles.alternativeMaterialText}>
-                              Material: {alternative.material}
-                            </Text>
-                          </View>
+                            {alternative.wasteGuideMatch &&
+                            alternative.wasteGuideMatch.title ? (
+                              <View style={styles.alternativeHsyDetails}>
+                                <View style={styles.alternativeHsyHeader}>
+                                  <Ionicons
+                                    name="leaf"
+                                    size={16}
+                                    color="#10b981"
+                                  />
+                                  <Text style={styles.alternativeHsyHeaderText}>
+                                    HSY Waste Guide
+                                  </Text>
+                                </View>
 
-                          <View style={styles.alternativeSortingBox}>
-                            <Ionicons
-                              name="information-circle"
-                              size={16}
-                              color="#00AAA3"
-                            />
-                            <Text style={styles.alternativeSortingText}>
-                              {alternative.sortingExplanation}
-                            </Text>
-                          </View>
+                                <Text style={styles.alternativeHsyTitle}>
+                                  {alternative.wasteGuideMatch.title}
+                                </Text>
 
-                          {alternative.hsyMatchId && (
-                            <View style={styles.alternativeHsyBadge}>
-                              <Ionicons
-                                name="checkmark-circle"
-                                size={14}
-                                color="#10b981"
-                              />
-                              <Text style={styles.alternativeHsyText}>
-                                HSY Waste Guide match found
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                      ))}
+                                {alternative.wasteGuideMatch.synonyms &&
+                                  alternative.wasteGuideMatch.synonyms.length >
+                                    0 && (
+                                    <Text style={styles.alternativeHsySynonyms}>
+                                      Also:{" "}
+                                      {alternative.wasteGuideMatch.synonyms
+                                        .slice(0, 3)
+                                        .join(", ")}
+                                    </Text>
+                                  )}
+
+                                {alternative.wasteGuideMatch.notes && (
+                                  <Text style={styles.alternativeHsyNotes}>
+                                    {alternative.wasteGuideMatch.notes.replace(
+                                      /<[^>]*>/g,
+                                      ""
+                                    )}
+                                  </Text>
+                                )}
+
+                                {alternative.wasteGuideMatch.recyclingMethods &&
+                                  alternative.wasteGuideMatch.recyclingMethods
+                                    .length > 0 && (
+                                    <View
+                                      style={styles.alternativeRecyclingMethods}
+                                    >
+                                      <Text
+                                        style={
+                                          styles.alternativeRecyclingMethodsTitle
+                                        }
+                                      >
+                                        Disposal:
+                                      </Text>
+                                      {alternative.wasteGuideMatch.recyclingMethods
+                                        .slice(0, 2)
+                                        .map((method, idx) => (
+                                          <View
+                                            key={idx}
+                                            style={styles.alternativeMethodItem}
+                                          >
+                                            <Ionicons
+                                              name={
+                                                method.isFree
+                                                  ? "checkmark-circle"
+                                                  : "card"
+                                              }
+                                              size={12}
+                                              color={
+                                                method.isFree
+                                                  ? "#10b981"
+                                                  : "#f59e0b"
+                                              }
+                                            />
+                                            <Text
+                                              style={
+                                                styles.alternativeMethodText
+                                              }
+                                            >
+                                              {method.title}
+                                              {method.isFree && " (Free)"}
+                                            </Text>
+                                          </View>
+                                        ))}
+                                    </View>
+                                  )}
+                              </View>
+                            ) : alternative.hsyMatchId ? (
+                              <View style={styles.alternativeHsyBadge}>
+                                <Ionicons
+                                  name="checkmark-circle"
+                                  size={14}
+                                  color="#10b981"
+                                />
+                                <Text style={styles.alternativeHsyText}>
+                                  HSY Waste Guide match found (ID:{" "}
+                                  {alternative.hsyMatchId})
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        );
+                      })}
                     </View>
                   )}
                 </View>
@@ -1107,6 +1202,64 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "500",
     color: "#10b981",
+    marginLeft: 4,
+  },
+  // Alternative HSY Details Styles
+  alternativeHsyDetails: {
+    marginTop: 8,
+    padding: 10,
+    backgroundColor: "#ecfdf5",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#d1fae5",
+  },
+  alternativeHsyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  alternativeHsyHeaderText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#10b981",
+    marginLeft: 4,
+  },
+  alternativeHsyTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#065f46",
+    marginBottom: 4,
+  },
+  alternativeHsySynonyms: {
+    fontSize: 11,
+    color: "#047857",
+    fontStyle: "italic",
+    marginBottom: 6,
+  },
+  alternativeHsyNotes: {
+    fontSize: 11,
+    color: "#065f46",
+    lineHeight: 16,
+    marginBottom: 6,
+    paddingLeft: 4,
+  },
+  alternativeRecyclingMethods: {
+    marginTop: 6,
+  },
+  alternativeRecyclingMethodsTitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#065f46",
+    marginBottom: 4,
+  },
+  alternativeMethodItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 3,
+  },
+  alternativeMethodText: {
+    fontSize: 11,
+    color: "#064e3b",
     marginLeft: 4,
   },
   // Old styles to remove

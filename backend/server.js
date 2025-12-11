@@ -588,9 +588,12 @@ async function analyzeProductImage(imagePath, hsyWasteGuideList) {
   try {
     const base64Image = await convertImageToBase64(imagePath);
 
-    // Format HSY waste guide list for comparison
+    // Format COMPLETE HSY waste guide list for comparison (all items, not limited)
+    console.log(
+      `📋 Preparing complete HSY cache for OpenAI: ${hsyWasteGuideList.length} items`
+    );
+
     const hsyListFormatted = hsyWasteGuideList
-      .slice(0, 150)
       .map(
         (item) =>
           `ID: ${item.id}, Title: "${item.title}"${
@@ -600,6 +603,10 @@ async function analyzeProductImage(imagePath, hsyWasteGuideList) {
           }`
       )
       .join("\n");
+
+    console.log(
+      `✅ HSY cache formatted: ${hsyListFormatted.length} characters, ${hsyWasteGuideList.length} waste items`
+    );
 
     // Step 1: Analyze the image and get main answer + 4 alternatives
     const analysisResponse = await axios.post(
@@ -720,7 +727,7 @@ IMPORTANT:
     const confidence = primary.confidence || 50;
     const keywords = primary.keywords || [];
 
-    // Step 2: Find HSY match for primary answer
+    // Step 2: Find HSY match for primary answer with reasoning
     const productDescription = `${name}, ${material}, ${category}`;
 
     const matchingResponse = await axios.post(
@@ -745,13 +752,14 @@ Match based on:
 2. Item type: ${name}
 3. Category: ${category}
 
-Return ONLY the ID number of the best matching HSY item, or "null" if no good match exists.
-Response format: Just the ID number (e.g., "123") or "null"`,
+Return a JSON object with the ID and a brief explanation of why you chose it.
+Format: {"id": 123, "reasoning": "Brief explanation why this HSY item matches"}
+If no good match exists, return: {"id": null, "reasoning": "Brief explanation why no match found"}`,
               },
             ],
           },
         ],
-        max_tokens: 50,
+        max_tokens: 150,
         temperature: 0.1,
       },
       {
@@ -765,16 +773,34 @@ Response format: Just the ID number (e.g., "123") or "null"`,
     const matchContent =
       matchingResponse.data.choices[0].message.content.trim();
     let hsyMatchId = null;
+    let matchReasoning = "No reasoning provided";
 
-    if (matchContent && matchContent !== "null" && matchContent !== "NULL") {
-      const parsedId = parseInt(matchContent.replace(/['"]/g, ""));
-      if (!isNaN(parsedId)) {
-        hsyMatchId = parsedId;
+    try {
+      const cleanedMatchContent = cleanOpenAIResponse(matchContent);
+      const matchResult = JSON.parse(cleanedMatchContent);
+
+      if (matchResult.id && matchResult.id !== "null") {
+        hsyMatchId = parseInt(matchResult.id);
+        matchReasoning = matchResult.reasoning || "Match found";
+      } else {
+        matchReasoning = matchResult.reasoning || "No suitable HSY match found";
+      }
+    } catch (parseError) {
+      // Fallback to old parsing logic
+      if (matchContent && matchContent !== "null" && matchContent !== "NULL") {
+        const parsedId = parseInt(matchContent.replace(/['"]/g, ""));
+        if (!isNaN(parsedId)) {
+          hsyMatchId = parsedId;
+          matchReasoning = "Match found (legacy format)";
+        }
       }
     }
 
-    console.log(`Primary item: "${productDescription}"`);
-    console.log(`HSY Match ID: ${hsyMatchId}`);
+    console.log(`\n${"=".repeat(70)}`);
+    console.log(`🔍 PRIMARY ITEM ANALYSIS:`);
+    console.log(`   Item: "${productDescription}"`);
+    console.log(`   HSY Match ID: ${hsyMatchId || "None"}`);
+    console.log(`   🤖 AI Reasoning: "${matchReasoning}"`);
 
     // Step 3: Process alternative answers and find HSY matches for each
     const alternativeAnswers = [];
@@ -784,7 +810,7 @@ Response format: Just the ID number (e.g., "123") or "null"`,
       const alt = alternatives[i];
       const altDescription = `${alt.itemName}, ${alt.material}`;
 
-      // Try to find HSY match for this alternative
+      // Try to find HSY match for this alternative with reasoning
       const altMatchingResponse = await axios.post(
         OPENAI_API_URL,
         {
@@ -800,12 +826,12 @@ Response format: Just the ID number (e.g., "123") or "null"`,
 HSY Items:
 ${hsyListFormatted}
 
-Return only the ID number or "null".`,
+Return JSON: {"id": number_or_null, "reasoning": "brief explanation"}`,
                 },
               ],
             },
           ],
-          max_tokens: 50,
+          max_tokens: 150,
           temperature: 0.1,
         },
         {
@@ -819,15 +845,48 @@ Return only the ID number or "null".`,
       const altMatchContent =
         altMatchingResponse.data.choices[0].message.content.trim();
       let altHsyMatchId = null;
+      let altMatchReasoning = "No reasoning provided";
 
-      if (
-        altMatchContent &&
-        altMatchContent !== "null" &&
-        altMatchContent !== "NULL"
-      ) {
-        const parsedId = parseInt(altMatchContent.replace(/['"]/g, ""));
-        if (!isNaN(parsedId)) {
-          altHsyMatchId = parsedId;
+      try {
+        const cleanedAltContent = cleanOpenAIResponse(altMatchContent);
+        const altMatchResult = JSON.parse(cleanedAltContent);
+
+        if (altMatchResult.id && altMatchResult.id !== "null") {
+          altHsyMatchId = parseInt(altMatchResult.id);
+          altMatchReasoning = altMatchResult.reasoning || "Match found";
+        } else {
+          altMatchReasoning =
+            altMatchResult.reasoning || "No suitable HSY match found";
+        }
+      } catch (parseError) {
+        // Fallback to old parsing logic
+        if (
+          altMatchContent &&
+          altMatchContent !== "null" &&
+          altMatchContent !== "NULL"
+        ) {
+          const parsedId = parseInt(altMatchContent.replace(/['"]/g, ""));
+          if (!isNaN(parsedId)) {
+            altHsyMatchId = parsedId;
+            altMatchReasoning = "Match found (legacy format)";
+          }
+        }
+      }
+
+      console.log(`\n🔍 ALTERNATIVE #${i + 1}:`);
+      console.log(`   Item: "${altDescription}"`);
+      console.log(`   HSY Match ID: ${altHsyMatchId || "None"}`);
+      console.log(`   🤖 AI Reasoning: "${altMatchReasoning}"`);
+
+      // Fetch HSY waste guide details for this alternative if match found
+      let altWasteGuideDetails = null;
+      if (altHsyMatchId) {
+        console.log(`   Fetching HSY details for alternative #${i + 1}...`);
+        altWasteGuideDetails = await getHSYWasteGuideDetails(altHsyMatchId);
+        if (altWasteGuideDetails) {
+          console.log(
+            `   ✅ Found HSY details: "${altWasteGuideDetails.title}"`
+          );
         }
       }
 
@@ -837,8 +896,20 @@ Return only the ID number or "null".`,
         sortingExplanation: alt.sortingExplanation,
         confidence: alt.confidence,
         hsyMatchId: altHsyMatchId,
+        wasteGuideMatch: altWasteGuideDetails
+          ? {
+              id: altWasteGuideDetails.id,
+              title: altWasteGuideDetails.title,
+              synonyms: altWasteGuideDetails.synonyms || [],
+              notes: altWasteGuideDetails.notes || null,
+              wasteTypes: altWasteGuideDetails.wasteTypes || [],
+              recyclingMethods: altWasteGuideDetails.recyclingMethods || [],
+            }
+          : null,
       });
     }
+
+    console.log(`${"=".repeat(70)}\n`);
 
     // Build final result
     const result = {
@@ -893,6 +964,14 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
     // Step 1: Get HSY waste guide list
     console.log("Fetching HSY waste guide list...");
     const hsyWasteGuideList = await getHSYWasteGuideList();
+
+    // Verify we have the complete cache
+    console.log(`✅ Retrieved HSY cache: ${hsyWasteGuideList.length} items`);
+    if (hsyWasteGuideList.length < 600) {
+      console.warn(
+        `⚠️ WARNING: HSY cache has fewer items than expected (${hsyWasteGuideList.length} < 600)`
+      );
+    }
 
     // Step 2: Get object and material analysis
     const objectMaterialResult = await analyzeObjectMaterial(imagePath);

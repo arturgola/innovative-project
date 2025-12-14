@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use("/uploads", express.static("uploads"));
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -1087,52 +1088,54 @@ app.post("/analyze-product", upload.single("image"), async (req, res) => {
           return res.status(500).json({ error: err.message });
         }
 
-                // If user provided, update their stats and level
+        // If user provided, update their stats and level
         if (userId) {
-                //  Get current total_points
-      db.get(
-    "SELECT total_points FROM users WHERE id = ?",
-    [userId],
-    (getErr, userRow) => {
-      if (getErr) {
-        console.error("Error fetching user for level update:", getErr);
-        return;
-      }
-      if (!userRow) {
-        console.warn("User not found for level update:", userId);
-        return;
-      }
+          //  Get current total_points
+          db.get(
+            "SELECT total_points FROM users WHERE id = ?",
+            [userId],
+            (getErr, userRow) => {
+              if (getErr) {
+                console.error("Error fetching user for level update:", getErr);
+                return;
+              }
+              if (!userRow) {
+                console.warn("User not found for level update:", userId);
+                return;
+              }
 
-      //  Calculate new total points
-      const previousTotal = userRow.total_points || 0;
-      const newTotalPoints = previousTotal + points;
+              //  Calculate new total points
+              const previousTotal = userRow.total_points || 0;
+              const newTotalPoints = previousTotal + points;
 
-      //  Calculate new level based on total points
-      const newLevel = calculateLevel(newTotalPoints);
+              //  Calculate new level based on total points
+              const newLevel = calculateLevel(newTotalPoints);
 
-      //  Save updated stats + level
-      db.run(
-        `UPDATE users
+              //  Save updated stats + level
+              db.run(
+                `UPDATE users
          SET total_points = ?,
              level = ?,
              scans_today = COALESCE(scans_today, 0) + 1,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        [newTotalPoints, newLevel, userId],
-        (updateErr) => {
-          if (updateErr) {
-            console.error("Error updating user stats/level:", updateErr);
-          } else {
-            console.log(
-              `User ${userId} updated: total_points=${newTotalPoints}, level=${newLevel}`
-            );
-          }
+                [newTotalPoints, newLevel, userId],
+                (updateErr) => {
+                  if (updateErr) {
+                    console.error(
+                      "Error updating user stats/level:",
+                      updateErr
+                    );
+                  } else {
+                    console.log(
+                      `User ${userId} updated: total_points=${newTotalPoints}, level=${newLevel}`
+                    );
+                  }
+                }
+              );
+            }
+          );
         }
-      );
-    }
-  );
-}
-
 
         // Return the complete product data
         const productWithAnalysis = {
@@ -1266,9 +1269,6 @@ app.get("/users/:id/scans", (req, res) => {
     }
   );
 });
-
-// Serve uploaded images
-app.use("/uploads", express.static("uploads"));
 
 // Debug endpoint to see cached HSY items
 app.get("/hsy-cache", async (req, res) => {
@@ -1572,8 +1572,7 @@ app.put("/users/:id", (req, res) => {
     if (!existing) return res.status(404).json({ error: "User not found" });
 
     const newName = name.trim();
-    const newLevel =
-      level !== undefined ? level : existing.level;
+    const newLevel = level !== undefined ? level : existing.level;
     const newTotalPoints =
       total_points !== undefined ? total_points : existing.total_points;
     const newScansToday =
@@ -1602,7 +1601,6 @@ app.put("/users/:id", (req, res) => {
     );
   });
 });
-
 
 // Delete user
 app.delete("/users/:id", (req, res) => {
